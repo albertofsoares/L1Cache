@@ -67,13 +67,13 @@
             signOut, onAuthStateChanged 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { 
-            getFirestore, collection, addDoc, getDocs, doc, 
+            getFirestore, collection, addDoc, getDocs, getDoc, doc, 
             setDoc, deleteDoc, updateDoc, serverTimestamp, query, where, increment, orderBy, limit 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         
         import { 
             Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, 
-            Trophy, Bold, Italic, Code, List, Clock 
+            Trophy, Bold, Italic, Code, List 
         } from "https://esm.sh/lucide-react@0.344.0?bundle";
 
         const firebaseConfig = {
@@ -239,6 +239,7 @@
             const loadUserData = async (currentUser) => {
                 await loadPublicCards();
                 try {
+                    // Carregar Progresso Individual
                     const q = query(collection(db, `users/${currentUser.uid}/reviews`));
                     const snapshot = await getDocs(q);
                     const userReviews = {};
@@ -246,6 +247,24 @@
                         userReviews[doc.id] = doc.data();
                     });
                     setReviews(userReviews);
+
+                    // --- GARANTIR ENTRADA NO RANKING (Mesmo zerado) ---
+                    // Verifica se o usuário já existe no leaderboard
+                    const statsRef = doc(db, 'leaderboard', currentUser.uid);
+                    const statsSnap = await getDoc(statsRef);
+                    
+                    // Se não existir, cria a entrada inicial zerada
+                    if (!statsSnap.exists()) {
+                        await setDoc(statsRef, {
+                            email: currentUser.email,
+                            total: 0,
+                            retention: 0,
+                            timeStudied: 0,
+                            lastActive: serverTimestamp()
+                        });
+                    }
+                    // --------------------------------------------------
+
                 } catch (error) {
                     console.error("Erro progresso:", error);
                     setReviews({});
@@ -501,7 +520,7 @@
                                     </tr>
                                 ))}
                                 {leaders.length === 0 && !loading && (
-                                    <tr><td colSpan="5" className="p-12 text-center text-slate-500">Ainda sem dados. Complete um deck para aparecer aqui!</td></tr>
+                                    <tr><td colSpan="5" className="p-12 text-center text-slate-500">Nenhum estudante no ranking ainda.</td></tr>
                                 )}
                             </tbody>
                         </table>

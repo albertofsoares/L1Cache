@@ -3,56 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnkiPro Digital - CS Student Edition</title>
+    <title>AnkiPro CS - Algoritmos & Estruturas</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel para JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Configuração de Ícones e Fontes -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "lucide-react": "https://esm.sh/lucide-react@0.294.0",
-        "firebase/app": "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
-        "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
-      }
-    }
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Configuração Tailwind Customizada -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#151e2e', 900: '#0f172a' },
+                        primary: { 500: '#3b82f6', 600: '#2563eb' }
+                    },
+                    animation: {
+                        'flip': 'flip 0.6s forwards',
+                    }
+                }
+            }
+        }
     </script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
-        .card-flip { transition: transform 0.6s; transform-style: preserve-3d; }
-        .card-flip.flipped { transform: rotateY(180deg); }
-        .card-face { backface-visibility: hidden; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        .card-back { transform: rotateY(180deg); }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        /* Estilos críticos para o Flip Card 3D */
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        
+        /* Scrollbar elegante */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        body { background-color: #0f172a; color: #e2e8f0; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect } from 'react';
-        import { createRoot } from 'react-dom/client';
-        import { initializeApp } from "firebase/app";
+    <script type="text/babel">
+        // --- IMPORTAÇÕES FIREBASE (Módulos ES) ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
             getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
             signOut, onAuthStateChanged 
-        } from "firebase/auth";
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { 
             getFirestore, collection, addDoc, getDocs, doc, 
-            updateDoc, deleteDoc, setDoc, serverTimestamp 
-        } from "firebase/firestore";
-        import { 
-            Brain, LogIn, LogOut, UserPlus, Save, Trash2, 
-            Edit3, Lock, X, RotateCw, CheckCircle, GraduationCap
-        } from 'lucide-react';
+            setDoc, deleteDoc, updateDoc, serverTimestamp, query, where 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // --- 1. CONFIGURAÇÃO E CONSTANTES ---
+        // --- CONFIGURAÇÃO ---
         const firebaseConfig = {
             apiKey: "AIzaSyClIIJkYOmAvEKPtXvG-SIi9SzxQpaBN9s",
             authDomain: "ankidigital.firebaseapp.com",
@@ -65,246 +80,243 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
-        // Caminhos Absolutos para Evitar Erros de Permissão
-        const APP_ID = "ankidigital"; 
-        const PUBLIC_PATH = `artifacts/${APP_ID}/public/data/cards`;
-        
-        const getProgressPath = (uid) => `artifacts/${APP_ID}/users/${uid}/progress`;
 
-        // --- 2. LÓGICA DO ALGORITMO ANKI (SM-2) ---
-        const calculateSM2 = (rating, prevInterval, prevEase) => {
-            // Rating: 0=Errei, 1=Difícil, 2=Bom, 3=Fácil
-            let newInterval, newEase;
-            
-            if (rating === 0) {
-                newInterval = 1; // Reseta para amanhã
-                newEase = Math.max(1.3, prevEase - 0.2);
+        // --- ALGORITMO SUPERMEMO 2 (SM-2) ---
+        // Este é o coração do Anki. Calcula o próximo intervalo baseado na qualidade da resposta.
+        const calculateSM2 = (quality, prevInterval, prevRepetitions, prevEF) => {
+            // Quality: 0-5 (0=Blackout, 5=Perfeito)
+            // Interval: Dias até a próxima revisão
+            // Repetitions: Quantas vezes acertou seguidas
+            // EF: Fator de Facilidade (Easiness Factor)
+
+            let interval, repetitions, ef;
+
+            if (quality >= 3) {
+                if (prevRepetitions === 0) {
+                    interval = 1;
+                } else if (prevRepetitions === 1) {
+                    interval = 6;
+                } else {
+                    interval = Math.round(prevInterval * prevEF);
+                }
+                repetitions = prevRepetitions + 1;
             } else {
-                if (prevInterval === 0) newInterval = 1;
-                else if (prevInterval === 1) newInterval = 3;
-                else newInterval = Math.round(prevInterval * prevEase);
-                
-                // Ajuste fino do fator de facilidade
-                if (rating === 1) newEase = prevEase - 0.15;
-                else if (rating === 3) newEase = prevEase + 0.15;
-                else newEase = prevEase;
+                repetitions = 0;
+                interval = 1;
             }
 
-            // Garante mínimo de facilidade
-            newEase = Math.max(1.3, newEase);
-            
-            const dueDate = new Date();
-            dueDate.setDate(dueDate.getDate() + newInterval);
-            
-            return { interval: newInterval, ease: newEase, dueDate };
+            ef = prevEF + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+            if (ef < 1.3) ef = 1.3;
+
+            return { interval, repetitions, ef };
         };
 
-        // --- 3. COMPONENTES ---
-
-        // Componente de Feedback/Loading
-        const StatusMessage = ({ loading, error }) => {
-            if (loading) return <div className="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center"><RotateCw className="animate-spin text-blue-500 w-10 h-10"/></div>;
-            if (error) return <div className="bg-red-900/50 border border-red-500 text-red-200 p-4 rounded mb-4 text-sm">{error}</div>;
-            return null;
+        // --- COMPONENTES UI (Ícones Lucide) ---
+        const Icons = {
+            Brain: () => <i data-lucide="brain" className="w-6 h-6 text-blue-500"></i>,
+            LogOut: () => <i data-lucide="log-out" className="w-4 h-4"></i>,
+            Plus: () => <i data-lucide="plus" className="w-4 h-4"></i>,
+            Trash: () => <i data-lucide="trash-2" className="w-4 h-4"></i>,
+            Edit: () => <i data-lucide="pencil" className="w-4 h-4"></i>,
+            Check: () => <i data-lucide="check" className="w-4 h-4"></i>,
+            X: () => <i data-lucide="x" className="w-4 h-4"></i>,
+            Folder: () => <i data-lucide="folder" className="w-4 h-4 text-amber-500"></i>,
+            File: () => <i data-lucide="file-text" className="w-4 h-4 text-slate-400"></i>,
+            Lock: () => <i data-lucide="lock" className="w-4 h-4"></i>
         };
 
-        function App() {
-            // Estados Globais
-            const [user, setUser] = useState(null);
-            const [isAdmin, setIsAdmin] = useState(false);
-            const [view, setView] = useState('loading'); // loading, login, dashboard, study, admin
+        // --- MAIN APP COMPONENT ---
+        const App = () => {
+            const [user, setUser] = React.useState(null);
+            const [isAdmin, setIsAdmin] = React.useState(false);
+            const [view, setView] = React.useState("loading"); // loading, auth, decks, study, admin
+            const [cards, setCards] = React.useState([]);
+            const [reviews, setReviews] = React.useState({}); // Mapa de progresso do usuário
+            const [activeDeck, setActiveDeck] = React.useState(null); // Filtro atual
+            const [studyQueue, setStudyQueue] = React.useState([]);
             
-            // Dados
-            const [cards, setCards] = useState([]);
-            const [studyQueue, setStudyQueue] = useState([]);
-            const [loading, setLoading] = useState(true);
-            const [error, setError] = useState('');
+            // Render Icons Effect
+            React.useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            });
 
-            // Estados de Estudo
-            const [currentIndex, setCurrentIndex] = useState(0);
-            const [isFlipped, setIsFlipped] = useState(false);
-
-            // Estados de Form (Login/Admin)
-            const [email, setEmail] = useState('');
-            const [password, setPassword] = useState('');
-            const [isRegister, setIsRegister] = useState(false);
-            const [newCard, setNewCard] = useState({ front: '', back: '', deck: 'Computação' });
-            const [editingId, setEditingId] = useState(null);
-
-            // --- 4. EFEITOS E AUTH ---
-            useEffect(() => {
-                const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            // Auth Listener
+            React.useEffect(() => {
+                const unsub = onAuthStateChanged(auth, async (currentUser) => {
                     setUser(currentUser);
                     if (currentUser) {
-                        const adminCheck = currentUser.email?.endsWith('@userpro.com');
-                        setIsAdmin(adminCheck);
-                        setView('dashboard');
-                        fetchData(currentUser.uid);
+                        setIsAdmin(currentUser.email.endsWith("@userpro.com"));
+                        await loadUserData(currentUser);
                     } else {
                         setIsAdmin(false);
-                        setView('login');
-                        fetchData(null); // Busca apenas cards para visitante
+                        setReviews({});
+                        await loadPublicCards(); // Visitantes veem cards mas sem progresso salvo
                     }
+                    setView(currentUser ? "decks" : "auth");
                 });
-                return () => unsubscribe();
+                return () => unsub();
             }, []);
 
-            // --- 5. DATA FETCHING (CRÍTICO) ---
-            const fetchData = async (uid) => {
-                setLoading(true);
-                setError('');
+            // --- DATA LOADING ---
+            const loadPublicCards = async () => {
                 try {
-                    // 1. Buscar Cards Públicos
-                    const cardsRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'cards');
-                    const snapshot = await getDocs(cardsRef);
-                    const loadedCards = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-                    // 2. Se logado, buscar progresso
-                    let mergedCards = loadedCards;
-                    if (uid) {
-                        const progressRef = collection(db, 'artifacts', APP_ID, 'users', uid, 'progress');
-                        const progSnap = await getDocs(progressRef);
-                        const progressMap = {};
-                        progSnap.docs.forEach(doc => progressMap[doc.id] = doc.data());
-
-                        mergedCards = loadedCards.map(c => ({
-                            ...c,
-                            userData: progressMap[c.id] || { interval: 0, ease: 2.5, dueDate: null }
-                        }));
-                    } else {
-                        // Visitante: sem dados de progresso
-                        mergedCards = loadedCards.map(c => ({
-                            ...c,
-                            userData: { interval: 0, ease: 2.5, dueDate: null }
-                        }));
-                    }
-
-                    setCards(mergedCards);
-                    setLoading(false);
-                } catch (err) {
-                    console.error("Erro Fatal:", err);
-                    setError("Erro ao carregar banco de dados. Verifique sua conexão.");
-                    setLoading(false);
+                    const q = query(collection(db, "cards"));
+                    const snapshot = await getDocs(q);
+                    const loadedCards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setCards(loadedCards);
+                } catch (error) {
+                    console.error("Erro ao carregar cards:", error);
+                    alert("Erro de conexão. Verifique o console.");
                 }
             };
 
-            // --- 6. FUNÇÕES DE ADMIN (CRUD) ---
-            const handleSaveCard = async () => {
-                if (!isAdmin) return;
-                if (!newCard.front || !newCard.back) {
-                    alert("Preencha frente e verso");
-                    return;
-                }
-
-                setLoading(true);
+            const loadUserData = async (currentUser) => {
+                await loadPublicCards();
                 try {
-                    const cardsRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'cards');
-                    
-                    if (editingId) {
-                        // Update
-                        await updateDoc(doc(cardsRef, editingId), {
-                            front: newCard.front,
-                            back: newCard.back,
-                            deck: newCard.deck,
-                            updatedAt: serverTimestamp()
-                        });
-                    } else {
-                        // Create
-                        await addDoc(cardsRef, {
-                            ...newCard,
-                            createdAt: serverTimestamp()
-                        });
-                    }
-                    
-                    setNewCard({ front: '', back: '', deck: 'Computação' });
-                    setEditingId(null);
-                    await fetchData(user.uid); // Recarrega tudo
-                    alert("Salvo com sucesso!");
-                } catch (err) {
-                    setError("Erro ao salvar card: " + err.message);
-                } finally {
-                    setLoading(false);
+                    const q = query(collection(db, `users/${currentUser.uid}/reviews`));
+                    const snapshot = await getDocs(q);
+                    const userReviews = {};
+                    snapshot.forEach(doc => {
+                        userReviews[doc.id] = doc.data();
+                    });
+                    setReviews(userReviews);
+                } catch (error) {
+                    console.error("Erro ao carregar progresso:", error);
                 }
             };
 
-            const handleDelete = async (id) => {
-                if (!confirm("Excluir permanentemente?")) return;
-                setLoading(true);
-                try {
-                    await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'cards', id));
-                    await fetchData(user.uid);
-                } catch (err) {
-                    setError("Erro ao deletar: " + err.message);
-                } finally {
-                    setLoading(false);
-                }
+            // --- DECK LOGIC (Category/Subcategory) ---
+            const getDecksStructure = () => {
+                const structure = {};
+                cards.forEach(card => {
+                    const cat = card.category || "Geral";
+                    const sub = card.subcategory || "Geral";
+                    if (!structure[cat]) structure[cat] = {};
+                    if (!structure[cat][sub]) structure[cat][sub] = [];
+                    structure[cat][sub].push(card);
+                });
+                return structure;
             };
 
-            // --- 7. LÓGICA DE ESTUDO ---
-            const startSession = () => {
+            const startStudy = (category, subcategory = null) => {
                 const now = new Date();
-                let queue = [];
+                let queue = cards.filter(c => {
+                    if (category && c.category !== category) return false;
+                    if (subcategory && c.subcategory !== subcategory) return false;
+                    return true;
+                });
 
+                // Filtrar pelo algoritmo SM-2 (apenas cards vencidos ou novos)
                 if (user) {
-                    // Lógica para Estudante (Baseado em datas)
-                    queue = cards.filter(c => {
-                        // Se não tem dueDate (novo) ou dueDate já passou
-                        if (!c.userData?.dueDate) return true;
-                        return c.userData.dueDate.seconds * 1000 <= now.getTime();
+                    queue = queue.filter(card => {
+                        const review = reviews[card.id];
+                        if (!review) return true; // Card novo
+                        return review.dueDate.toDate() <= now; // Card vencido
                     });
                 } else {
-                    // Lógica para Visitante (Embaralhar tudo)
-                    queue = [...cards].sort(() => Math.random() - 0.5);
+                    // Visitante: Estuda tudo (Modo Cram)
+                    queue = queue.sort(() => Math.random() - 0.5);
                 }
 
                 if (queue.length === 0) {
-                    alert("Tudo em dia! Nenhum card para revisar agora.");
+                    alert("Parabéns! Você está em dia com esta categoria.");
                     return;
                 }
 
                 setStudyQueue(queue);
-                setCurrentIndex(0);
-                setIsFlipped(false);
-                setView('study');
+                setActiveDeck({ category, subcategory });
+                setView("study");
             };
 
-            const handleRate = async (rating) => {
-                // Animar saída
-                if (currentIndex >= studyQueue.length - 1) {
-                    alert("Sessão Finalizada!");
-                    setView('dashboard');
-                    return;
-                }
+            // --- VIEWS ---
 
-                // Se logado, salvar progresso
-                if (user) {
-                    const card = studyQueue[currentIndex];
-                    const { interval, ease, dueDate } = calculateSM2(
-                        rating, 
-                        card.userData.interval, 
-                        card.userData.ease
-                    );
+            if (view === "loading") {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-blue-500">
+                        <Icons.Brain />
+                        <span className="ml-2 font-bold animate-pulse">Carregando Córtex...</span>
+                    </div>
+                );
+            }
 
-                    // Optimistic UI update (não espera o banco pra passar pro proximo)
-                    // Mas dispara o save em background
-                    try {
-                        const progRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'progress', card.id);
-                        setDoc(progRef, {
-                            interval, ease, dueDate, lastReviewed: serverTimestamp()
-                        }); // Sem await para fluidez, ou com await se quiser garantir
-                    } catch (e) {
-                        console.error("Erro silencioso ao salvar progresso", e);
-                    }
-                }
+            if (view === "auth") {
+                return <AuthScreen onLogin={() => setView("decks")} guestMode={() => setView("decks")} />;
+            }
 
-                setIsFlipped(false);
-                setTimeout(() => setCurrentIndex(prev => prev + 1), 150);
-            };
+            return (
+                <div className="min-h-screen flex flex-col bg-slate-900 text-slate-200 font-sans">
+                    {/* NAVBAR */}
+                    <nav className="border-b border-slate-800 bg-slate-900/95 sticky top-0 z-50 backdrop-blur">
+                        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-blue-500 font-bold text-xl cursor-pointer" onClick={() => setView("decks")}>
+                                <Icons.Brain />
+                                <span className="text-white tracking-tight">Anki<span className="text-blue-500">Pro</span></span>
+                            </div>
+                            
+                            <div className="flex items-center gap-4">
+                                {isAdmin && (
+                                    <button onClick={() => setView("admin")} className="flex items-center gap-1 text-sm text-amber-500 hover:text-amber-400 font-medium px-3 py-1 rounded bg-amber-500/10 border border-amber-500/20">
+                                        <Icons.Lock /> Painel Admin
+                                    </button>
+                                )}
+                                {user ? (
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs text-slate-500 hidden sm:block">{user.email}</span>
+                                        <button onClick={() => signOut(auth)} className="text-slate-400 hover:text-red-400 transition-colors">
+                                            <Icons.LogOut />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button onClick={() => setView("auth")} className="text-sm text-blue-400 font-medium">Fazer Login</button>
+                                )}
+                            </div>
+                        </div>
+                    </nav>
 
-            // --- 8. AUTH ACTIONS ---
-            const handleAuth = async (e) => {
+                    {/* CONTENT AREA */}
+                    <main className="flex-1 max-w-6xl mx-auto w-full p-4">
+                        {view === "decks" && (
+                            <DecksView 
+                                structure={getDecksStructure()} 
+                                startStudy={startStudy} 
+                                totalCards={cards.length}
+                                reviews={reviews}
+                            />
+                        )}
+
+                        {view === "study" && (
+                            <StudySession 
+                                queue={studyQueue} 
+                                user={user}
+                                reviews={reviews}
+                                setReviews={setReviews}
+                                onFinish={() => setView("decks")} 
+                            />
+                        )}
+
+                        {view === "admin" && isAdmin && (
+                            <AdminPanel 
+                                cards={cards} 
+                                setCards={setCards} 
+                                onExit={() => setView("decks")}
+                            />
+                        )}
+                    </main>
+                </div>
+            );
+        };
+
+        // --- AUTH SCREEN ---
+        const AuthScreen = ({ onLogin, guestMode }) => {
+            const [isRegister, setIsRegister] = React.useState(false);
+            const [email, setEmail] = React.useState("");
+            const [password, setPassword] = React.useState("");
+            const [error, setError] = React.useState("");
+            const [loading, setLoading] = React.useState(false);
+
+            const handleSubmit = async (e) => {
                 e.preventDefault();
+                setError("");
                 setLoading(true);
                 try {
                     if (isRegister) {
@@ -312,220 +324,308 @@
                     } else {
                         await signInWithEmailAndPassword(auth, email, password);
                     }
+                    onLogin();
                 } catch (err) {
-                    let msg = "Erro desconhecido";
-                    if (err.code === 'auth/invalid-credential') msg = "Dados incorretos.";
-                    if (err.code === 'auth/email-already-in-use') msg = "Email já em uso.";
-                    if (err.code === 'auth/weak-password') msg = "Senha fraca (mín 6 dígitos).";
-                    setError(msg);
+                    setError(err.message.includes('invalid') ? "Dados inválidos." : "Erro na autenticação.");
+                } finally {
                     setLoading(false);
                 }
             };
 
-            // --- RENDERIZAÇÃO ---
-            if (view === 'loading') return <StatusMessage loading={true} />;
-
             return (
-                <div className="min-h-screen flex flex-col">
-                    <StatusMessage loading={loading} />
-                    
-                    {/* NAVBAR */}
-                    <nav className="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-40">
-                        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-blue-500 font-bold text-xl">
-                                <Brain /> <span>Anki<span className="text-white">Pro</span></span>
-                            </div>
-                            {user ? (
-                                <div className="flex gap-4 items-center text-sm">
-                                    <span className="hidden sm:inline text-slate-400">{user.email}</span>
-                                    {isAdmin && (
-                                        <button onClick={() => setView('admin')} className="text-amber-400 hover:text-amber-300 flex items-center gap-1">
-                                            <Lock size={16}/> Admin
-                                        </button>
-                                    )}
-                                    <button onClick={() => setView('dashboard')} className="text-slate-300 hover:text-white">Dashboard</button>
-                                    <button onClick={() => signOut(auth)} className="text-red-400 hover:text-red-300"><LogOut size={18}/></button>
-                                </div>
-                            ) : (
-                                view !== 'login' && <button onClick={() => setView('login')} className="text-blue-400 font-medium">Login</button>
-                            )}
+                <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 to-slate-800">
+                    <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl">
+                        <div className="text-center mb-8">
+                            <h1 className="text-3xl font-bold text-white mb-2 flex justify-center items-center gap-2"><Icons.Brain/> AnkiPro</h1>
+                            <p className="text-slate-400 text-sm">Ciência da Computação - Espaçamento Inteligente</p>
                         </div>
-                    </nav>
 
-                    {/* CONTENT */}
-                    <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
-                        {error && <StatusMessage error={error} />}
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            {error && <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded">{error}</div>}
+                            <input 
+                                type="email" placeholder="Email da Facul/Pessoal" required 
+                                className="w-full bg-slate-800 border border-slate-700 p-3 rounded text-white focus:border-blue-500 outline-none transition-colors"
+                                value={email} onChange={e => setEmail(e.target.value)}
+                            />
+                            <input 
+                                type="password" placeholder="Senha" required 
+                                className="w-full bg-slate-800 border border-slate-700 p-3 rounded text-white focus:border-blue-500 outline-none transition-colors"
+                                value={password} onChange={e => setPassword(e.target.value)}
+                            />
+                            <button disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold p-3 rounded transition-all transform hover:scale-[1.02]">
+                                {loading ? "Processando..." : (isRegister ? "Criar Conta" : "Entrar")}
+                            </button>
+                        </form>
 
-                        {/* LOGIN SCREEN */}
-                        {view === 'login' && (
-                            <div className="max-w-md mx-auto mt-10 bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700">
-                                <h1 className="text-2xl font-bold mb-2 text-white">{isRegister ? "Criar Conta" : "Login"}</h1>
-                                <p className="text-slate-400 text-sm mb-6">Salve seu progresso e estude de forma eficiente.</p>
-                                
-                                <form onSubmit={handleAuth} className="space-y-4">
-                                    <input 
-                                        type="email" placeholder="Email" required 
-                                        className="w-full bg-slate-900 border border-slate-700 p-3 rounded text-white"
-                                        value={email} onChange={e => setEmail(e.target.value)}
-                                    />
-                                    <input 
-                                        type="password" placeholder="Senha" required 
-                                        className="w-full bg-slate-900 border border-slate-700 p-3 rounded text-white"
-                                        value={password} onChange={e => setPassword(e.target.value)}
-                                    />
-                                    <button className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded font-bold transition-colors">
-                                        {isRegister ? "Cadastrar" : "Entrar"}
-                                    </button>
-                                </form>
-                                
-                                <div className="mt-4 flex justify-between items-center text-sm">
-                                    <button onClick={() => { setIsRegister(!isRegister); setError(''); }} className="text-blue-400 hover:underline">
-                                        {isRegister ? "Já tenho conta" : "Criar conta nova"}
-                                    </button>
-                                    <button onClick={startSession} className="text-slate-500 hover:text-white">
-                                        Modo Visitante
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* DASHBOARD */}
-                        {view === 'dashboard' && (
-                            <div className="animate-fade-in">
-                                <header className="mb-8 text-center md:text-left">
-                                    <h2 className="text-3xl font-bold text-white mb-2">Olá, {user ? user.email.split('@')[0] : 'Visitante'}</h2>
-                                    <div className="text-slate-400">Total de cards na base: <span className="text-blue-400 font-bold">{cards.length}</span></div>
-                                </header>
-
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    <div onClick={startSession} className="bg-gradient-to-br from-blue-700 to-indigo-900 p-8 rounded-2xl shadow-lg cursor-pointer hover:scale-[1.02] transition-transform text-white relative overflow-hidden group">
-                                        <GraduationCap className="absolute -right-4 -bottom-4 opacity-20 w-32 h-32" />
-                                        <h3 className="text-2xl font-bold mb-2">Revisar Agora</h3>
-                                        <p className="text-blue-100 mb-6">O algoritmo selecionou os cards ideais para hoje.</p>
-                                        <button className="bg-white text-blue-900 px-6 py-2 rounded-full font-bold shadow-lg">Iniciar</button>
-                                    </div>
-                                    
-                                    <div className="bg-slate-800 p-8 rounded-2xl border border-slate-700">
-                                        <h3 className="text-xl font-bold mb-4 text-white">Estatísticas Rápidas</h3>
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-slate-400">Total de Cards</span>
-                                                <span className="text-white">{cards.length}</span>
-                                            </div>
-                                            {user && (
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-slate-400">Cards Estudados</span>
-                                                    <span className="text-emerald-400">
-                                                        {cards.filter(c => c.userData.interval > 0).length}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ESTUDO (FLIP CARD) */}
-                        {view === 'study' && studyQueue.length > 0 && (
-                            <div className="max-w-xl mx-auto flex flex-col items-center h-[80vh] justify-center">
-                                <div className="w-full flex justify-between text-xs text-slate-500 uppercase tracking-widest mb-4">
-                                    <span>Card {currentIndex + 1} / {studyQueue.length}</span>
-                                    <span>{studyQueue[currentIndex].deck}</span>
-                                </div>
-
-                                <div className="relative w-full aspect-video cursor-pointer perspective-1000 group" onClick={() => setIsFlipped(!isFlipped)}>
-                                    <div className={`w-full h-full relative preserve-3d transition-transform duration-500 ${isFlipped ? 'rotate-y-180' : ''}`} style={{transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'}}>
-                                        {/* FRENTE */}
-                                        <div className="absolute inset-0 backface-hidden bg-slate-800 border-2 border-slate-700 rounded-2xl flex items-center justify-center p-8 text-center shadow-2xl" style={{backfaceVisibility: 'hidden'}}>
-                                            <h3 className="text-2xl font-medium text-white">{studyQueue[currentIndex].front}</h3>
-                                            <span className="absolute bottom-4 text-xs text-slate-500">Toque para ver a resposta</span>
-                                        </div>
-                                        {/* VERSO */}
-                                        <div className="absolute inset-0 backface-hidden bg-slate-800 border-2 border-blue-900/50 rounded-2xl flex items-center justify-center p-8 text-center shadow-2xl" style={{backfaceVisibility: 'hidden', transform: 'rotateY(180deg)'}}>
-                                            <p className="text-xl text-blue-100">{studyQueue[currentIndex].back}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* CONTROLES DE AVALIAÇÃO */}
-                                <div className={`grid grid-cols-4 gap-3 w-full mt-8 transition-opacity duration-300 ${isFlipped ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-                                    <button onClick={() => handleRate(0)} className="bg-red-900/20 text-red-400 border border-red-900/50 p-3 rounded-lg flex flex-col items-center hover:bg-red-900/40">
-                                        <span className="font-bold text-sm">Errei</span>
-                                        <span className="text-[10px] opacity-70">1 min</span>
-                                    </button>
-                                    <button onClick={() => handleRate(1)} className="bg-slate-700/30 text-slate-300 border border-slate-600/50 p-3 rounded-lg flex flex-col items-center hover:bg-slate-700/50">
-                                        <span className="font-bold text-sm">Difícil</span>
-                                        <span className="text-[10px] opacity-70">2 dias</span>
-                                    </button>
-                                    <button onClick={() => handleRate(2)} className="bg-blue-900/20 text-blue-400 border border-blue-900/50 p-3 rounded-lg flex flex-col items-center hover:bg-blue-900/40">
-                                        <span className="font-bold text-sm">Bom</span>
-                                        <span className="text-[10px] opacity-70">4 dias</span>
-                                    </button>
-                                    <button onClick={() => handleRate(3)} className="bg-emerald-900/20 text-emerald-400 border border-emerald-900/50 p-3 rounded-lg flex flex-col items-center hover:bg-emerald-900/40">
-                                        <span className="font-bold text-sm">Fácil</span>
-                                        <span className="text-[10px] opacity-70">7 dias</span>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ADMIN PAINEL */}
-                        {view === 'admin' && isAdmin && (
-                            <div className="max-w-2xl mx-auto animate-fade-in">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-2xl font-bold text-amber-500 flex items-center gap-2"><Lock/> Área Restrita</h2>
-                                    <button onClick={() => setView('dashboard')} className="text-slate-400 hover:text-white"><X/></button>
-                                </div>
-
-                                <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 mb-8">
-                                    <h3 className="text-lg font-bold text-white mb-4">{editingId ? 'Editar Card' : 'Adicionar Novo Card'}</h3>
-                                    <div className="space-y-4">
-                                        <textarea 
-                                            placeholder="Pergunta (Frente)" 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded p-3 text-white"
-                                            rows="2"
-                                            value={newCard.front}
-                                            onChange={e => setNewCard({...newCard, front: e.target.value})}
-                                        ></textarea>
-                                        <textarea 
-                                            placeholder="Resposta (Verso)" 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded p-3 text-white"
-                                            rows="3"
-                                            value={newCard.back}
-                                            onChange={e => setNewCard({...newCard, back: e.target.value})}
-                                        ></textarea>
-                                        <div className="flex justify-end gap-3">
-                                            {editingId && <button onClick={() => { setEditingId(null); setNewCard({front:'',back:'',deck:'Computação'}); }} className="text-slate-400">Cancelar</button>}
-                                            <button onClick={handleSaveCard} className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2 rounded font-bold flex items-center gap-2">
-                                                <Save size={18}/> Salvar
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    {cards.map(card => (
-                                        <div key={card.id} className="bg-slate-800/50 border border-slate-700 p-4 rounded-lg flex justify-between items-start">
-                                            <div>
-                                                <p className="text-white font-medium">{card.front}</p>
-                                                <p className="text-slate-400 text-sm mt-1">{card.back}</p>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button onClick={() => { setEditingId(card.id); setNewCard({front: card.front, back: card.back, deck: card.deck}); window.scrollTo({top:0, behavior:'smooth'}); }} className="text-blue-400 hover:bg-blue-900/30 p-2 rounded"><Edit3 size={18}/></button>
-                                                <button onClick={() => handleDelete(card.id)} className="text-red-400 hover:bg-red-900/30 p-2 rounded"><Trash2 size={18}/></button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </main>
+                        <div className="mt-6 flex justify-between text-xs text-slate-500">
+                            <button onClick={() => setIsRegister(!isRegister)} className="hover:text-white underline">
+                                {isRegister ? "Já tenho conta" : "Criar nova conta"}
+                            </button>
+                            <button onClick={guestMode} className="hover:text-white">Modo Visitante</button>
+                        </div>
+                    </div>
                 </div>
             );
-        }
+        };
 
-        const root = createRoot(document.getElementById('root'));
+        // --- DECKS VIEW ---
+        const DecksView = ({ structure, startStudy, totalCards, reviews }) => {
+            const categories = Object.keys(structure).sort();
+
+            return (
+                <div className="animate-fade-in">
+                    <header className="mb-8 border-b border-slate-800 pb-6">
+                        <h2 className="text-2xl font-bold text-white mb-2">Meus Decks</h2>
+                        <div className="flex gap-4 text-sm text-slate-400">
+                            <span>Total de Cards: <strong className="text-white">{totalCards}</strong></span>
+                            <span>Estudados: <strong className="text-emerald-400">{Object.keys(reviews).length}</strong></span>
+                        </div>
+                    </header>
+
+                    <div className="grid gap-6">
+                        {categories.map(cat => (
+                            <div key={cat} className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+                                <div className="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
+                                    <h3 className="font-bold text-lg text-white flex items-center gap-2">
+                                        <Icons.Folder /> {cat}
+                                    </h3>
+                                    <button 
+                                        onClick={() => startStudy(cat)}
+                                        className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-4 py-2 rounded-full font-bold transition-colors"
+                                    >
+                                        Estudar Categoria
+                                    </button>
+                                </div>
+                                <div className="p-2">
+                                    {Object.keys(structure[cat]).map(sub => {
+                                        const count = structure[cat][sub].length;
+                                        return (
+                                            <div key={sub} className="flex justify-between items-center p-3 hover:bg-slate-700/30 rounded-lg transition-colors group">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-1 h-8 bg-slate-600 rounded-full group-hover:bg-blue-500 transition-colors"></div>
+                                                    <span className="text-slate-300 font-medium">{sub}</span>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-xs bg-slate-700 text-slate-400 px-2 py-1 rounded">{count} cards</span>
+                                                    <button onClick={() => startStudy(cat, sub)} className="text-blue-400 hover:text-white p-2">
+                                                        <Icons.Brain />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- STUDY SESSION (CORE) ---
+        const StudySession = ({ queue, user, reviews, setReviews, onFinish }) => {
+            const [index, setIndex] = React.useState(0);
+            const [isFlipped, setIsFlipped] = React.useState(false);
+            const [finished, setFinished] = React.useState(false);
+
+            if (finished || queue.length === 0) {
+                return (
+                    <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-fade-in">
+                        <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6 text-emerald-400">
+                            <Icons.Check />
+                        </div>
+                        <h2 className="text-3xl font-bold text-white mb-2">Sessão Concluída!</h2>
+                        <p className="text-slate-400 mb-8 max-w-md">O espaçamento ideal foi calculado. Descanse seu cérebro para consolidar a memória.</p>
+                        <button onClick={onFinish} className="bg-slate-700 hover:bg-slate-600 text-white px-8 py-3 rounded-lg font-bold transition-colors">
+                            Voltar aos Decks
+                        </button>
+                    </div>
+                );
+            }
+
+            const card = queue[index];
+
+            const handleRate = async (quality) => {
+                // quality: 0 (Again), 3 (Hard), 4 (Good), 5 (Easy)
+                
+                if (user) {
+                    // Recuperar dados anteriores ou iniciar novos
+                    const prevData = reviews[card.id] || { interval: 0, repetitions: 0, ef: 2.5 };
+                    
+                    // Calcular novos dados SM-2
+                    const result = calculateSM2(quality, prevData.interval, prevData.repetitions, prevData.ef);
+                    
+                    // Data de revisão futura
+                    const dueDate = new Date();
+                    dueDate.setDate(dueDate.getDate() + result.interval);
+
+                    // Atualizar estado local
+                    const newReviewData = { ...result, dueDate };
+                    const newReviews = { ...reviews, [card.id]: { ...newReviewData, dueDate: { toDate: () => dueDate } } }; // Mock toDate for local update
+                    setReviews(newReviews);
+
+                    // Salvar no Firestore (Fire & Forget para performance)
+                    setDoc(doc(db, `users/${user.uid}/reviews/${card.id}`), {
+                        ...newReviewData,
+                        lastReviewed: serverTimestamp()
+                    });
+                }
+
+                setIsFlipped(false);
+                if (index < queue.length - 1) {
+                    setTimeout(() => setIndex(index + 1), 200); // Delay suave
+                } else {
+                    setFinished(true);
+                }
+            };
+
+            return (
+                <div className="max-w-2xl mx-auto mt-8 perspective-1000 h-[70vh] flex flex-col">
+                    <div className="flex justify-between text-xs uppercase tracking-widest text-slate-500 mb-4">
+                        <span>{card.category} &gt; {card.subcategory}</span>
+                        <span>{index + 1} / {queue.length}</span>
+                    </div>
+
+                    {/* FLASHCARD CONTAINER */}
+                    <div 
+                        className="relative flex-1 cursor-pointer group"
+                        onClick={() => setIsFlipped(!isFlipped)}
+                    >
+                        <div className={`w-full h-full duration-500 transform-style-3d transition-transform relative ${isFlipped ? 'rotate-y-180' : ''}`}>
+                            
+                            {/* FRENTE */}
+                            <div className="absolute inset-0 backface-hidden bg-slate-800 border border-slate-700 rounded-2xl p-8 flex flex-col items-center justify-center text-center shadow-xl">
+                                <h3 className="text-2xl font-medium text-white leading-relaxed">{card.front}</h3>
+                                <p className="absolute bottom-6 text-xs text-slate-500 animate-pulse">Toque para virar</p>
+                            </div>
+
+                            {/* VERSO */}
+                            <div className="absolute inset-0 backface-hidden rotate-y-180 bg-slate-800 border-2 border-blue-600/30 rounded-2xl p-8 flex flex-col items-center justify-center text-center shadow-xl">
+                                <div className="text-xl text-blue-100 leading-relaxed overflow-y-auto max-h-full scrollbar-thin">
+                                    {card.back}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* BOTÕES DE RESPOSTA */}
+                    <div className={`grid grid-cols-4 gap-3 mt-6 transition-all duration-300 ${isFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                        <button onClick={(e) => { e.stopPropagation(); handleRate(0); }} className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors flex flex-col items-center">
+                            <span className="font-bold text-sm">Errei</span>
+                            <span className="text-[10px] opacity-70">Resetar</span>
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); handleRate(3); }} className="p-3 rounded-lg bg-slate-700/50 border border-slate-600 text-slate-300 hover:bg-slate-700 transition-colors flex flex-col items-center">
+                            <span className="font-bold text-sm">Difícil</span>
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); handleRate(4); }} className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-colors flex flex-col items-center">
+                            <span className="font-bold text-sm">Bom</span>
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); handleRate(5); }} className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-colors flex flex-col items-center">
+                            <span className="font-bold text-sm">Fácil</span>
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- ADMIN PANEL ---
+        const AdminPanel = ({ cards, setCards, onExit }) => {
+            const [editingId, setEditingId] = React.useState(null);
+            const [form, setForm] = React.useState({ front: '', back: '', category: 'Ciência da Computação', subcategory: '' });
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if(!form.front || !form.back) return alert("Preencha Frente e Verso");
+
+                try {
+                    if (editingId) {
+                        await updateDoc(doc(db, "cards", editingId), form);
+                        setCards(cards.map(c => c.id === editingId ? { ...c, ...form } : c));
+                    } else {
+                        const ref = await addDoc(collection(db, "cards"), { ...form, createdAt: serverTimestamp() });
+                        setCards([...cards, { id: ref.id, ...form }]);
+                    }
+                    setForm({ front: '', back: '', category: 'Ciência da Computação', subcategory: '' });
+                    setEditingId(null);
+                } catch (err) {
+                    alert("Erro ao salvar: " + err.message);
+                }
+            };
+
+            const handleDelete = async (id) => {
+                if(!confirm("Tem certeza?")) return;
+                try {
+                    await deleteDoc(doc(db, "cards", id));
+                    setCards(cards.filter(c => c.id !== id));
+                } catch (err) {
+                    alert("Erro ao deletar.");
+                }
+            };
+
+            return (
+                <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-amber-500">Gerenciamento de Cards</h2>
+                        <button onClick={onExit} className="text-slate-400 hover:text-white"><Icons.X /></button>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-4 mb-8 bg-slate-900/50 p-4 rounded-lg">
+                        <div className="grid grid-cols-2 gap-4">
+                            <input 
+                                className="bg-slate-800 border border-slate-700 p-2 rounded text-white text-sm"
+                                placeholder="Categoria (ex: Algoritmos)" 
+                                value={form.category} onChange={e => setForm({...form, category: e.target.value})}
+                                list="categories"
+                            />
+                            <datalist id="categories">
+                                <option value="Ciência da Computação" />
+                                <option value="Matemática Discreta" />
+                                <option value="Engenharia de Software" />
+                            </datalist>
+
+                            <input 
+                                className="bg-slate-800 border border-slate-700 p-2 rounded text-white text-sm"
+                                placeholder="Subcategoria (ex: Ordenação)" 
+                                value={form.subcategory} onChange={e => setForm({...form, subcategory: e.target.value})}
+                            />
+                        </div>
+                        <textarea 
+                            className="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white"
+                            placeholder="Frente (Pergunta)" rows="2"
+                            value={form.front} onChange={e => setForm({...form, front: e.target.value})}
+                        />
+                        <textarea 
+                            className="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white"
+                            placeholder="Verso (Resposta)" rows="3"
+                            value={form.back} onChange={e => setForm({...form, back: e.target.value})}
+                        />
+                        <div className="flex justify-end gap-2">
+                            {editingId && <button type="button" onClick={() => { setEditingId(null); setForm({front:'', back:'', category:'', subcategory:''}) }} className="text-slate-400 text-sm px-4">Cancelar</button>}
+                            <button className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded font-bold">
+                                {editingId ? "Atualizar" : "Adicionar Card"}
+                            </button>
+                        </div>
+                    </form>
+
+                    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+                        {cards.map(card => (
+                            <div key={card.id} className="flex justify-between items-center bg-slate-900 p-3 rounded border border-slate-800 hover:border-slate-600 transition-colors">
+                                <div className="truncate flex-1">
+                                    <span className="text-xs text-blue-400 block">{card.category} / {card.subcategory}</span>
+                                    <span className="text-sm text-slate-300">{card.front}</span>
+                                </div>
+                                <div className="flex gap-2 ml-4">
+                                    <button onClick={() => { setEditingId(card.id); setForm(card); }} className="text-blue-400 hover:bg-blue-900/30 p-2 rounded"><Icons.Edit /></button>
+                                    <button onClick={() => handleDelete(card.id)} className="text-red-400 hover:bg-red-900/30 p-2 rounded"><Icons.Trash /></button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
 </body>

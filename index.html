@@ -73,7 +73,7 @@
         
         import { 
             Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, 
-            Trophy, Bold, Italic, Code, List 
+            Trophy, Bold, Italic, Code, List, Clock 
         } from "https://esm.sh/lucide-react@0.344.0?bundle";
 
         const firebaseConfig = {
@@ -150,11 +150,21 @@
             return { interval: newInterval, ease: newEase, state: newState, dueDate: dueDate };
         };
 
-        const formatTime = (minutes) => {
+        const formatTimeButton = (minutes) => {
             if (!minutes && minutes !== 0) return '-';
             if (minutes < 60) return `${minutes}m`;
             if (minutes < 1440) return `${Math.round(minutes/60)}h`;
             return `${Math.round(minutes/1440)}d`;
+        };
+
+        const formatDuration = (ms) => {
+            if (!ms) return "0m";
+            const seconds = Math.floor((ms / 1000) % 60);
+            const minutes = Math.floor((ms / (1000 * 60)) % 60);
+            const hours = Math.floor((ms / (1000 * 60 * 60)));
+
+            if (hours > 0) return `${hours}h ${minutes}m`;
+            return `${minutes}m ${seconds}s`;
         };
 
         const simulateOptions = (currentData) => {
@@ -458,7 +468,7 @@
                         </div>
                         <div>
                             <h2 className="text-3xl font-bold text-white">Ranking Global</h2>
-                            <p className="text-slate-400 text-sm">Top estudantes por retenção</p>
+                            <p className="text-slate-400 text-sm">Top estudantes por retenção e tempo</p>
                         </div>
                     </div>
 
@@ -469,6 +479,7 @@
                                     <th className="p-5 border-b border-slate-700">Rank</th>
                                     <th className="p-5 border-b border-slate-700">Estudante</th>
                                     <th className="p-5 border-b border-slate-700 text-center">XP</th>
+                                    <th className="p-5 border-b border-slate-700 text-center">Tempo</th>
                                     <th className="p-5 border-b border-slate-700 text-center">Retenção</th>
                                 </tr>
                             </thead>
@@ -481,6 +492,7 @@
                                             {l.email ? l.email.split('@')[0] : 'Anônimo'}
                                         </td>
                                         <td className="p-5 text-center text-blue-400 font-mono font-bold bg-blue-500/5">{l.total || 0}</td>
+                                        <td className="p-5 text-center text-slate-300 font-mono text-sm">{formatDuration(l.timeStudied || 0)}</td>
                                         <td className="p-5 text-center">
                                             <span className={`px-3 py-1 rounded-full text-xs font-bold border ${l.retention > 80 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>
                                                 {l.retention ? l.retention.toFixed(1) : 0}%
@@ -489,7 +501,7 @@
                                     </tr>
                                 ))}
                                 {leaders.length === 0 && !loading && (
-                                    <tr><td colSpan="4" className="p-12 text-center text-slate-500">Ainda sem dados. Complete um deck para aparecer aqui!</td></tr>
+                                    <tr><td colSpan="5" className="p-12 text-center text-slate-500">Ainda sem dados. Complete um deck para aparecer aqui!</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -502,6 +514,7 @@
             const [index, setIndex] = React.useState(0);
             const [isFlipped, setIsFlipped] = React.useState(false);
             const [finished, setFinished] = React.useState(false);
+            const [cardStartTime, setCardStartTime] = React.useState(Date.now());
 
             if (finished || queue.length === 0) {
                 return (
@@ -521,6 +534,10 @@
 
             const handleRate = async (rating) => {
                 if (user) {
+                    // Calcular tempo gasto neste card
+                    const timeSpent = Date.now() - cardStartTime;
+                    setCardStartTime(Date.now()); // Reinicia para o próximo card
+
                     const result = calculateNextReview(rating, currentData);
                     const newReviews = { ...reviews, [card.id]: { ...result, dueDate: { toDate: () => result.dueDate } } };
                     setReviews(newReviews);
@@ -532,17 +549,18 @@
                             lastReviewed: serverTimestamp()
                         });
 
-                        // 2. Calcula as estatísticas em tempo real usando os dados da memória (newReviews)
+                        // 2. Calcula as estatísticas em tempo real
                         const totalCards = Object.keys(newReviews).length;
                         const graduatedCards = Object.values(newReviews).filter(r => r.state === 'graduated').length;
                         const retention = totalCards === 0 ? 0 : (graduatedCards / totalCards) * 100;
 
-                        // 3. Atualiza o Ranking com os dados calculados
+                        // 3. Atualiza o Ranking com Tempo Estudado
                         const statsRef = doc(db, 'leaderboard', user.uid);
                         await setDoc(statsRef, {
                             email: user.email,
-                            total: totalCards, // XP baseado em cards únicos estudados
-                            retention: retention, // Taxa real calculada
+                            total: totalCards,
+                            retention: retention,
+                            timeStudied: increment(timeSpent), // Incrementa tempo atômico
                             lastActive: serverTimestamp()
                         }, { merge: true });
 
@@ -576,19 +594,19 @@
                     <div className={`grid grid-cols-4 gap-3 mt-6 transition-all duration-300 ${isFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
                         <button onClick={(e) => { e.stopPropagation(); handleRate(1); }} className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 flex flex-col items-center transition-all hover:scale-105 active:scale-95">
                             <span className="font-bold text-sm">Errei</span>
-                            <span className="text-[10px] opacity-70 font-mono mt-1">{formatTime(options[1].interval)}</span>
+                            <span className="text-[10px] opacity-70 font-mono mt-1">{formatTimeButton(options[1].interval)}</span>
                         </button>
                         <button onClick={(e) => { e.stopPropagation(); handleRate(2); }} className="p-3 rounded-xl bg-slate-700/50 border border-slate-600 text-slate-300 hover:bg-slate-700 flex flex-col items-center transition-all hover:scale-105 active:scale-95">
                             <span className="font-bold text-sm">Difícil</span>
-                            <span className="text-[10px] opacity-70 font-mono mt-1">{formatTime(options[2].interval)}</span>
+                            <span className="text-[10px] opacity-70 font-mono mt-1">{formatTimeButton(options[2].interval)}</span>
                         </button>
                         <button onClick={(e) => { e.stopPropagation(); handleRate(3); }} className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 flex flex-col items-center transition-all hover:scale-105 active:scale-95">
                             <span className="font-bold text-sm">Bom</span>
-                            <span className="text-[10px] opacity-70 font-mono mt-1">{formatTime(options[3].interval)}</span>
+                            <span className="text-[10px] opacity-70 font-mono mt-1">{formatTimeButton(options[3].interval)}</span>
                         </button>
                         <button onClick={(e) => { e.stopPropagation(); handleRate(4); }} className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 flex flex-col items-center transition-all hover:scale-105 active:scale-95">
                             <span className="font-bold text-sm">Fácil</span>
-                            <span className="text-[10px] opacity-70 font-mono mt-1">{formatTime(options[4].interval)}</span>
+                            <span className="text-[10px] opacity-70 font-mono mt-1">{formatTimeButton(options[4].interval)}</span>
                         </button>
                     </div>
                 </div>

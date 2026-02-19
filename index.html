@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L1 Cache v2.2 (SM-2 Real-time)</title>
+    <title>L1 Cache (SM-2 / RT)</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -362,6 +362,9 @@
             const [finished, setFinished] = React.useState(false);
             const [cardStartTime, setCardStartTime] = React.useState(Date.now());
             const [requeueNotice, setRequeueNotice] = React.useState(null);
+            
+            // ESTADO PARA FEEDBACK SENSORIAL DOPAMINÉRGICO
+            const [feedbackPulse, setFeedbackPulse] = React.useState({ active: false, color: 'transparent' });
 
             const progress = queue.length > 0 ? ((index) / queue.length) * 100 : 100;
 
@@ -414,6 +417,20 @@
                 
                 // Trava Anki Engine: Limita o max time contado
                 if (timeSpent > 60000) timeSpent = 60000; 
+
+                // --- FEEDBACK SENSORIAL (RECOMPENSA DOPAMINÉRGICA IMEDIATA) ---
+                const colorMap = {
+                    1: 'rgba(239, 68, 68, 0.4)',  // Vermelho
+                    2: 'rgba(249, 115, 22, 0.4)', // Laranja
+                    3: 'rgba(59, 130, 246, 0.4)', // Azul
+                    4: 'rgba(16, 185, 129, 0.4)'  // Verde
+                };
+                
+                // Aciona instantaneamente
+                setFeedbackPulse({ active: true, color: colorMap[rating] });
+                // Inicia o fade out de forma ultra-rápida (50ms depois, permitindo um "pico" antes de apagar)
+                setTimeout(() => setFeedbackPulse(prev => ({ ...prev, active: false })), 50);
+                // --------------------------------------------------------------
 
                 setCardStartTime(Date.now());
                 const result = options[rating];
@@ -493,6 +510,16 @@
 
             return (
                 <div className="max-w-3xl mx-auto mt-4 h-[80vh] flex flex-col perspective-1000 relative">
+                    
+                    {/* OVERLAY: Pulso Sensorial Imediato (Dopaminérgico) */}
+                    <div 
+                        className={`fixed inset-0 pointer-events-none z-[100] ${feedbackPulse.active ? 'transition-none' : 'transition-opacity duration-500 ease-out'}`}
+                        style={{
+                            boxShadow: `inset 0 0 120px ${feedbackPulse.color}, inset 0 0 20px ${feedbackPulse.color}`,
+                            opacity: feedbackPulse.active ? 1 : 0
+                        }}
+                    ></div>
+
                     {requeueNotice && (
                         <div className="absolute top-10 left-1/2 transform -translate-x-1/2 z-50 bg-slate-800 text-blue-400 px-4 py-2 rounded-full border border-blue-500/30 shadow-lg text-sm font-bold animate-fade-in flex items-center gap-2">
                             <Repeat size={14} /> {requeueNotice}
@@ -523,7 +550,7 @@
                         </div>
                     )}
 
-                    <div className="relative flex-1 group">
+                    <div className="relative flex-1 group z-10">
                         <div className={`w-full h-full duration-500 transform-style-3d transition-transform relative ${isFlipped ? 'rotate-y-180' : ''}`}>
                             <div className="absolute inset-0 backface-hidden glass border border-slate-700 rounded-3xl p-6 md:p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden bg-slate-900/90">
                                 <div className="absolute top-4 right-4 text-slate-600 hover:text-blue-400 cursor-pointer transition-colors z-20" title="Ouvir Pergunta" onClick={(e) => { e.stopPropagation(); speakText(card.front); }}><Volume2 size={24} /></div>
@@ -537,22 +564,27 @@
                             </div>
                         </div>
                     </div>
-                    <div className={`grid grid-cols-4 gap-4 mt-6 transition-all duration-300 ${isFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                    
+                    <div className={`grid grid-cols-4 gap-4 mt-6 transition-all duration-300 z-10 ${isFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
                         <button onClick={() => handleRate(1)} className="p-4 rounded-2xl bg-slate-900 border border-red-900/30 text-red-400 hover:bg-red-900/20 hover:border-red-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
                             <span className="absolute top-2 right-2 text-[9px] bg-red-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 1</span>
                             <span className="font-bold text-sm mb-1 group-hover:text-red-300">Errei</span>
                             <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[1])}</span>
                         </button>
-                        <button onClick={() => handleRate(2)} className="p-4 rounded-2xl bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-500 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
-                            <span className="absolute top-2 right-2 text-[9px] bg-slate-700 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 2</span>
-                            <span className="font-bold text-sm mb-1 group-hover:text-white">Difícil</span>
+                        
+                        {/* Botão Difícil ajustado para Laranja harmonizando com o flash visual */}
+                        <button onClick={() => handleRate(2)} className="p-4 rounded-2xl bg-slate-900 border border-orange-900/30 text-orange-400 hover:bg-orange-900/20 hover:border-orange-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
+                            <span className="absolute top-2 right-2 text-[9px] bg-orange-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 2</span>
+                            <span className="font-bold text-sm mb-1 group-hover:text-orange-300">Difícil</span>
                             <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[2])}</span>
                         </button>
+                        
                         <button onClick={() => handleRate(3)} className="p-4 rounded-2xl bg-slate-900 border border-blue-900/30 text-blue-400 hover:bg-blue-900/20 hover:border-blue-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
                             <span className="absolute top-2 right-2 text-[9px] bg-blue-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 3</span>
                             <span className="font-bold text-sm mb-1 group-hover:text-blue-300">Bom</span>
                             <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[3])}</span>
                         </button>
+                        
                         <button onClick={() => handleRate(4)} className="p-4 rounded-2xl bg-slate-900 border border-emerald-900/30 text-emerald-400 hover:bg-emerald-900/20 hover:border-emerald-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
                             <span className="absolute top-2 right-2 text-[9px] bg-emerald-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 4</span>
                             <span className="font-bold text-sm mb-1 group-hover:text-emerald-300">Fácil</span>
@@ -852,7 +884,7 @@
                             <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
                             <Cpu size={24} className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" />
                         </div>
-                        <span className="font-mono text-sm tracking-[0.2em] mt-6 text-blue-400">INICIALIZANDO O L1 CACHE v2.2 (REAL-TIME)</span>
+                        <span className="font-mono text-sm tracking-[0.2em] mt-6 text-blue-400">INICIALIZANDO O L1 CACHE v1.0...</span>
                     </div>
                 );
             }
@@ -886,7 +918,7 @@
                         </div>
                     </nav>
 
-                    <main className="flex-1 max-w-6xl mx-auto w-full p-4">
+                    <main className="flex-1 max-w-6xl mx-auto w-full p-4 relative">
                         {view === "decks" && (
                             <div className="animate-fade-in space-y-6">
                                 <header className="border-b border-slate-800 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -934,7 +966,7 @@
                     <div className="w-full max-w-md glass p-8 rounded-2xl shadow-2xl relative z-10 animate-slide-up">
                         <div className="text-center mb-8">
                             <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-blue-500/30"><Cpu size={32} /></div>
-                            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">L1 Cache <span className="text-blue-400">2.2 RT</span></h1>
+                            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">L1 Cache <span className="text-blue-400">v1.0</span></h1>
                             <p className="text-slate-400 text-sm">Engine SM-2 Real-time para máxima retenção em Ciência da Computação.</p>
                         </div>
                         <form onSubmit={handleSubmit} className="space-y-4">

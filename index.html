@@ -1,1365 +1,1328 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L1 Cache (SM-2 / RT)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L1 Cache (SM-2 / RT)</title>
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Babel para JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Babel para JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Configuração Tailwind -->
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        slate: { 850: '#151e2e', 900: '#0f172a', 950: '#020617' },
-                        primary: { 500: '#3b82f6', 600: '#2563eb' },
-                        accent: { 500: '#8b5cf6' }
-                    },
-                    animation: {
-                        'flip': 'flip 0.6s forwards',
-                        'fade-in': 'fadeIn 0.5s ease-in-out',
-                        'slide-up': 'slideUp 0.4s ease-out',
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    },
-                    keyframes: {
-                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-                        slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } }
-                    },
-                    typography: (theme) => ({
-                        DEFAULT: { css: { color: theme('colors.slate.300'), strong: { color: theme('colors.white') } } }
-                    })
-                }
-            }
-        }
-    </script>
+    <!-- Configuração Tailwind -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#151e2e', 900: '#0f172a', 950: '#020617' },
+                        primary: { 500: '#3b82f6', 600: '#2563eb' },
+                        accent: { 500: '#8b5cf6' }
+                    },
+                    animation: {
+                        'flip': 'flip 0.6s forwards',
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.4s ease-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } }
+                    },
+                    typography: (theme) => ({
+                        DEFAULT: { css: { color: theme('colors.slate.300'), strong: { color: theme('colors.white') } } }
+                    })
+                }
+            }
+        }
+    </script>
 
-    <style>
-        .perspective-1000 { perspective: 1000px; }
-        .transform-style-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; }
-        .rotate-y-180 { transform: rotateY(180deg); }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-        body { background-color: #020617; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
-        .prose p { margin-bottom: 0.8em; line-height: 1.6; }
-        .prose strong { color: #60a5fa; font-weight: 700; }
-        .prose em { color: #facc15; font-style: italic; }
-        .prose ul { list-style-type: disc; padding-left: 1.2em; margin: 0.5em 0; text-align: left; display: inline-block; }
-        .prose code { background: #1e293b; color: #a5b4fc; padding: 0.2em 0.4em; border-radius: 0.3em; font-family: 'Fira Code', monospace; font-size: 0.9em; border: 1px solid #334155; }
-        .prose pre { background: #0f172a; padding: 1em; border-radius: 0.5em; overflow-x: auto; margin: 1em 0; border: 1px solid #1e293b; text-align: left; box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.5); }
-        .prose pre code { background: transparent; color: #e2e8f0; padding: 0; border: none; }
-        .prose { text-align: center; max-width: 100%; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-    </style>
+    <style>
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        body { background-color: #020617; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+        .prose p { margin-bottom: 0.8em; line-height: 1.6; }
+        .prose strong { color: #60a5fa; font-weight: 700; }
+        .prose em { color: #facc15; font-style: italic; }
+        .prose ul { list-style-type: disc; padding-left: 1.2em; margin: 0.5em 0; text-align: left; display: inline-block; }
+        .prose code { background: #1e293b; color: #a5b4fc; padding: 0.2em 0.4em; border-radius: 0.3em; font-family: 'Fira Code', monospace; font-size: 0.9em; border: 1px solid #334155; }
+        .prose pre { background: #0f172a; padding: 1em; border-radius: 0.5em; overflow-x: auto; margin: 1em 0; border: 1px solid #1e293b; text-align: left; box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.5); }
+        .prose pre code { background: transparent; color: #e2e8f0; padding: 0; border: none; }
+        .prose { text-align: center; max-width: 100%; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    </style>
 </head>
 
 <body>
 
-    <div id="root"></div>
-
-    <script type="text/babel" data-type="module">
-
-        // --- IMPORTS ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, updateDoc, serverTimestamp, query, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag } from "https://esm.sh/lucide-react@0.344.0?bundle";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyClIIJkYOmAvEKPtXvG-SIi9SzxQpaBN9s",
-            authDomain: "ankidigital.firebaseapp.com",
-            projectId: "ankidigital",
-            storageBucket: "ankidigital.firebasestorage.app",
-            messagingSenderId: "407660648093",
-            appId: "1:407660648093:web:b7bf69730e90a28cb36674"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        const normalize = (val) => String(val || '').trim();
-
-        // --- ERROR BOUNDARY ---
-        class ErrorBoundary extends React.Component {
-            constructor(props) { super(props); this.state = { hasError: false, error: null }; }
-            static getDerivedStateFromError(error) { return { hasError: true, error }; }
-            componentDidCatch(error, errorInfo) { console.error("React Error:", error, errorInfo); }
-            render() {
-                if (this.state.hasError) {
-                    return (
-                        <div className="min-h-screen flex items-center justify-center bg-slate-950 text-red-400 p-8 text-center">
-                            <div><h1 className="text-2xl font-bold mb-2">System Failure</h1><p className="mb-4">Kernel Panic. Reinicie o sistema.</p><button onClick={() => window.location.reload()} className="bg-red-600 text-white px-6 py-2 rounded font-bold hover:bg-red-500">Reboot</button></div>
-                        </div>
-                    );
-                }
-                return this.props.children;
-            }
-        }
-
-        // --- ENGINE ANKI (SM-2 Exato) ---
-        const LEARNING_STEPS = [1, 10]; // em minutos
-        const GRADUATING_INTERVAL = 1; // dias
-        const EASY_INTERVAL = 4; // dias
-        const STARTING_EASE = 2.5; 
-
-        const calculateNextReview = (rating, currentData) => {
-            let interval = currentData?.interval || 0; 
-            let ease = currentData?.ease || STARTING_EASE;
-            let state = currentData?.state || 'new'; 
-            let step = currentData?.step || 0; 
-
-            let newInterval = interval;
-            let newEase = ease;
-            let newState = state;
-            let newStep = step;
-            let dueMinutes = 0;
-
-            const STEPS = (state === 'relearning') ? [10] : LEARNING_STEPS;
-
-            if (state === 'new' || state === 'learning' || state === 'relearning') {
-                if (rating === 1) { // Errei (Again)
-                    newStep = 0;
-                    dueMinutes = STEPS[0];
-                    newState = state === 'new' ? 'learning' : state; 
-                } 
-                else if (rating === 2) { // Difícil (Hard)
-                    dueMinutes = Math.floor((STEPS[step] || STEPS[0]) * 1.5);
-                    if (dueMinutes < 1) dueMinutes = 1;
-                    newState = state === 'new' ? 'learning' : state;
-                } 
-                else if (rating === 3) { // Bom (Good)
-                    if (step < STEPS.length - 1) {
-                        newStep = step + 1;
-                        dueMinutes = STEPS[newStep];
-                        newState = state === 'new' ? 'learning' : state;
-                    } else {
-                        if (state === 'relearning') {
-                            newInterval = Math.max(1, interval); 
-                        } else {
-                            newInterval = GRADUATING_INTERVAL; 
-                        }
-                        newState = 'review';
-                        newStep = 0;
-                    }
-                } 
-                else if (rating === 4) { // Fácil (Easy)
-                    if (state === 'relearning') {
-                        newInterval = Math.max(1, interval + 1);
-                    } else {
-                        newInterval = EASY_INTERVAL; 
-                    }
-                    newState = 'review';
-                    newStep = 0;
-                }
-            } 
-            else if (state === 'review') {
-                if (rating === 1) { // Errei (Lapse/Again)
-                    newEase = Math.max(1.3, ease - 0.20);
-                    newInterval = Math.max(1, Math.floor(interval * 0.2)); 
-                    newState = 'relearning';
-                    newStep = 0;
-                    dueMinutes = STEPS[0]; 
-                } 
-                else if (rating === 2) { // Difícil (Hard)
-                    newEase = Math.max(1.3, ease - 0.15);
-                    newInterval = Math.max(interval + 1, Math.floor(interval * 1.2));
-                    newState = 'review';
-                } 
-                else if (rating === 3) { // Bom (Good)
-                    newInterval = Math.max(interval + 1, Math.floor(interval * ease));
-                    newState = 'review';
-                } 
-                else if (rating === 4) { // Fácil (Easy)
-                    newEase = ease + 0.15;
-                    newInterval = Math.max(interval + 1, Math.floor(interval * ease * 1.3));
-                    newState = 'review';
-                }
-            }
-
-            const now = new Date();
-            let dueDate = new Date();
-            let requeue = false;
-
-            if (newState === 'learning' || newState === 'relearning') {
-                dueDate = new Date(now.getTime() + dueMinutes * 60000);
-                requeue = true; 
-            } else {
-                dueDate.setDate(dueDate.getDate() + newInterval);
-                dueDate.setHours(0, 0, 0, 0);
-                requeue = false; 
-            }
-
-            return { 
-                interval: newInterval, 
-                ease: newEase, 
-                state: newState, 
-                step: newStep, 
-                dueDate: dueDate, 
-                requeue: requeue,
-                dueMinutes: (newState === 'learning' || newState === 'relearning') ? dueMinutes : 0
-            };
-        };
-
-        const formatTimeLabel = (result) => {
-            if (result.state === 'review') {
-                if (result.interval === 1) return '1d';
-                if (result.interval > 30) return `${Math.round(result.interval/30)}m`;
-                return `${result.interval}d`;
-            }
-            if (result.dueMinutes < 60) return `${Math.round(result.dueMinutes)}m`;
-            if (result.dueMinutes < 1440) return `${Math.round(result.dueMinutes/60)}h`;
-            return `${Math.round(result.dueMinutes/1440)}d`;
-        };
-
-        const formatDuration = (ms) => {
-            if (!ms) return "0m";
-            const seconds = Math.floor((ms / 1000) % 60);
-            const minutes = Math.floor((ms / (1000 * 60)) % 60);
-            const hours = Math.floor((ms / (1000 * 60 * 60)));
-            if (hours > 0) return `${hours}h ${minutes}m`;
-            return `${minutes}m ${seconds}s`;
-        };
-
-        const speakText = (htmlText) => {
-            if (!window.speechSynthesis) return;
-            window.speechSynthesis.cancel();
-            const tempDiv = document.createElement("div");
-            tempDiv.innerHTML = htmlText;
-            const text = tempDiv.textContent || tempDiv.innerText || "";
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = "pt-BR";
-            utterance.rate = 1.1; 
-            utterance.pitch = 1.0;
-            window.speechSynthesis.speak(utterance);
-        };
-
-        // --- COMPONENTS ---
-        const Heatmap = ({ reviews }) => {
-            const days = Array.from({length: 30}, (_, i) => {
-                const d = new Date();
-                d.setDate(d.getDate() - (29 - i));
-                return d.toISOString().split('T')[0];
-            });
-            const activityMap = {};
-            Object.values(reviews).forEach(r => {
-                if(r.lastReviewed) {
-                   const dateKey = r.lastReviewed.toDate ? r.lastReviewed.toDate().toISOString().split('T')[0] : new Date(r.lastReviewed).toISOString().split('T')[0];
-                   activityMap[dateKey] = (activityMap[dateKey] || 0) + 1;
-                }
-            });
-            return (
-                <div className="glass p-4 rounded-xl mb-6 shadow-xl border border-slate-700/50">
-                    <div className="flex items-center gap-2 mb-3 text-slate-400 text-xs uppercase font-bold tracking-wider">
-                        <Calendar size={14} /> Frequência de Revisão (Últimos 30 dias)
-                    </div>
-                    <div className="flex justify-between gap-1">
-                        {days.map(day => {
-                            const count = activityMap[day] || 0;
-                            let colorClass = "bg-slate-800";
-                            if (count > 0) colorClass = "bg-blue-900";
-                            if (count > 10) colorClass = "bg-blue-700";
-                            if (count > 30) colorClass = "bg-blue-500";
-                            if (count > 60) colorClass = "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]";
-                            return (<div key={day} title={`${day}: ${count} revisões`} className={`w-full h-8 rounded-sm transition-all duration-500 ${colorClass} hover:scale-125 cursor-pointer`}></div>);
-                        })}
-                    </div>
-                </div>
-            );
-        };
-
-        const RichTextEditor = ({ value, onChange }) => {
-            const editorRef = React.useRef(null);
-            
-            React.useEffect(() => {
-                if (editorRef.current && editorRef.current.innerHTML !== value) {
-                    editorRef.current.innerHTML = value || '';
-                }
-            }, [value]);
-
-            const execCmd = (cmd) => { document.execCommand(cmd, false, null); };
-            const execBlock = (tag) => { document.execCommand('formatBlock', false, tag); };
-
-            return (
-                <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden flex flex-col h-40 focus-within:border-blue-500 transition-colors">
-                    <div className="bg-slate-800 p-2 flex gap-1 border-b border-slate-700 flex-wrap">
-                        <button type="button" onClick={() => execCmd('bold')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Negrito"><Bold size={16}/></button>
-                        <button type="button" onClick={() => execCmd('italic')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Itálico"><Italic size={16}/></button>
-                        <button type="button" onClick={() => execCmd('insertUnorderedList')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Lista"><List size={16}/></button>
-                        <button type="button" onClick={() => execBlock('pre')} className="p-1.5 hover:bg-slate-700 rounded text-purple-400" title="Inserir Código (Bloco)"><Code size={16}/></button>
-                    </div>
-                    <div 
-                        ref={editorRef}
-                        className="flex-1 p-4 text-white focus:outline-none overflow-y-auto prose text-sm" 
-                        contentEditable 
-                        onInput={(e) => onChange(e.currentTarget.innerHTML)}
-                    ></div>
-                </div>
-            );
-        };
-
-        const CustomStudyModal = ({ isOpen, onClose, onStart, categories, tags }) => {
-            const [mode, setMode] = React.useState('due');
-            const [limit, setLimit] = React.useState(20);
-            const [selectedCategory, setSelectedCategory] = React.useState('All');
-            const [selectedTag, setSelectedTag] = React.useState('All');
-            
-            if (!isOpen) return null;
-            return (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-                    <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-md shadow-2xl relative">
-                        <button onClick={onClose} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={20}/></button>
-                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Settings size={20} className="text-blue-500"/> Estudo Personalizado</h2>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-slate-400 text-xs uppercase font-bold mb-2">Deck (Matéria)</label>
-                                    <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500 text-sm">
-                                        <option value="All">Todas</option>
-                                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-slate-400 text-xs uppercase font-bold mb-2 flex items-center gap-1"><Tag size={12}/> Filtrar por Tag</label>
-                                    <select value={selectedTag} onChange={e => setSelectedTag(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500 text-sm">
-                                        <option value="All">Qualquer Tag</option>
-                                        {tags.map(t => <option key={t} value={t}>#{t}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label className="block text-slate-400 text-xs uppercase font-bold mb-2">Modo de Estudo</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button onClick={() => setMode('due')} className={`p-3 rounded-lg text-sm border ${mode === 'due' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Revisão (Vencidos)</button>
-                                    <button onClick={() => setMode('cram')} className={`p-3 rounded-lg text-sm border ${mode === 'cram' ? 'bg-purple-600 border-purple-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Cram (Intensivo)</button>
-                                    <button onClick={() => setMode('new')} className={`p-3 rounded-lg text-sm border ${mode === 'new' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Apenas Novos</button>
-                                    <button onClick={() => setMode('all')} className={`p-3 rounded-lg text-sm border ${mode === 'all' ? 'bg-amber-600 border-amber-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Todos os Cards</button>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-slate-400 text-xs uppercase font-bold mb-2">Limite de Cards</label>
-                                <input type="number" value={limit} onChange={e => setLimit(Number(e.target.value))} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500" min="1" max="500" />
-                            </div>
-                            <button onClick={() => onStart({ category: selectedCategory, mode, limit, tag: selectedTag })} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold p-3 rounded-xl mt-4 hover:shadow-lg shadow-blue-900/20 transition-all transform active:scale-95">Iniciar Sessão</button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const StudySession = ({ initialQueue, user, reviews, setReviews, userStats, setUserStats, onFinish }) => {
-            const [queue, setQueue] = React.useState(initialQueue);
-            const [index, setIndex] = React.useState(0);
-            const [isFlipped, setIsFlipped] = React.useState(false);
-            const [finished, setFinished] = React.useState(false);
-            const [cardStartTime, setCardStartTime] = React.useState(Date.now());
-            const [requeueNotice, setRequeueNotice] = React.useState(null);
-            
-            const [feedbackPulse, setFeedbackPulse] = React.useState({ active: false, color: 'transparent' });
-
-            const progress = queue.length > 0 ? ((index) / queue.length) * 100 : 100;
-
-            const handleUndo = () => {
-                if (finished) { setFinished(false); setIndex(queue.length - 1); setIsFlipped(true); } 
-                else if (index > 0) { setIndex(index - 1); setIsFlipped(true); }
-                setCardStartTime(Date.now());
-            };
-
-            React.useEffect(() => {
-                const handleKeyDown = (e) => {
-                    if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); handleUndo(); return; }
-                    if (finished) return;
-                    if (e.code === 'Space') { if (!isFlipped) setIsFlipped(true); e.preventDefault(); } 
-                    else if (isFlipped) {
-                          if (e.key === '1') handleRate(1);
-                          if (e.key === '2') handleRate(2);
-                          if (e.key === '3') handleRate(3);
-                          if (e.key === '4') handleRate(4);
-                    }
-                };
-                window.addEventListener('keydown', handleKeyDown);
-                return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [isFlipped, finished, index, queue]);
-
-            if (finished || queue.length === 0) {
-                return (
-                    <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-fade-in relative">
-                        <div className="absolute top-0 left-0 w-full p-4 flex justify-start"><button onClick={handleUndo} className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 border border-slate-700 text-sm"><Undo2 size={16} /> Desfazer Último</button></div>
-                        <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 mb-6 border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]"><Check size={48} /></div>
-                        <h2 className="text-3xl font-bold text-white mb-2">Buffer Limpo</h2>
-                        <p className="text-slate-400 mb-8">Sessão completa. Bom trabalho na manutenção da sua retenção.</p>
-                        <button onClick={onFinish} className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg border border-slate-700">Voltar ao Dashboard</button>
-                    </div>
-                );
-            }
-
-            const card = queue[index];
-            const currentData = card.tempReviewData || reviews[card.id] || { interval: 0, ease: 2.5, state: 'new', step: 0 };
-            
-            const options = { 
-                1: calculateNextReview(1, currentData), 
-                2: calculateNextReview(2, currentData), 
-                3: calculateNextReview(3, currentData), 
-                4: calculateNextReview(4, currentData) 
-            };
-
-            const handleRate = async (rating) => {
-                let timeSpent = Date.now() - cardStartTime;
-                if (timeSpent > 60000) timeSpent = 60000; 
-
-                const colorMap = {
-                    1: 'rgba(239, 68, 68, 0.4)',  // Vermelho
-                    2: 'rgba(249, 115, 22, 0.4)', // Laranja
-                    3: 'rgba(59, 130, 246, 0.4)', // Azul
-                    4: 'rgba(16, 185, 129, 0.4)'  // Verde
-                };
-                
-                setFeedbackPulse({ active: true, color: colorMap[rating] });
-                setTimeout(() => setFeedbackPulse(prev => ({ ...prev, active: false })), 50);
-
-                setCardStartTime(Date.now());
-                const result = options[rating];
-
-                if (result.requeue) {
-                    if (result.dueMinutes < 5) {
-                        const requeuedCard = { ...card, tempReviewData: result };
-                        setQueue(prev => [...prev, requeuedCard]);
-                        setRequeueNotice(`Retorno rápido em ${formatTimeLabel(result)}`);
-                    } else {
-                        setRequeueNotice(`Em aprendizado. Libera em: ${formatTimeLabel(result)}`);
-                    }
-                    setTimeout(() => setRequeueNotice(null), 2500);
-                }
-
-                if (user && userStats) {
-                    const newReviews = { ...reviews, [card.id]: { ...result, dueDate: { toDate: () => result.dueDate }, lastReviewed: { toDate: () => new Date() } } };
-                    setReviews(newReviews);
-                    
-                    try {
-                        await setDoc(doc(db, `users/${user.uid}/reviews/${card.id}`), { ...result, lastReviewed: serverTimestamp() });
-                    } catch(e) { console.error("Erro ao salvar card:", e); }
-
-                    const isCorrect = rating > 1;
-                    const todayStr = new Date().toISOString().split('T')[0];
-
-                    const updatedStats = { ...userStats };
-                    updatedStats.timeStudied = (updatedStats.timeStudied || 0) + timeSpent;
-                    updatedStats.cardsSeen = (updatedStats.cardsSeen || 0) + 1;
-                    
-                    if (isCorrect) {
-                        updatedStats.correctAnswers = (updatedStats.correctAnswers || 0) + 1;
-                        updatedStats.currentStreak = (updatedStats.currentStreak || 0) + 1;
-                    } else {
-                        updatedStats.currentStreak = 0;
-                    }
-                    
-                    updatedStats.retention = (updatedStats.correctAnswers / updatedStats.cardsSeen) * 100;
-                    updatedStats.dailyActivity = updatedStats.dailyActivity || {};
-                    updatedStats.dailyActivity[todayStr] = (updatedStats.dailyActivity[todayStr] || 0) + 1;
-
-                    setUserStats(updatedStats);
-
-                    try {
-                        const statsRef = doc(db, 'leaderboard', user.uid);
-                        await setDoc(statsRef, { 
-                            email: user.email,
-                            ...updatedStats, 
-                            lastActive: serverTimestamp() 
-                        }, { merge: true });
-                    } catch(e) { console.error("Erro ao salvar stats:", e); }
-                }
-
-                setIsFlipped(false);
-                if (index < queue.length - 1) {
-                    setIndex(index + 1);
-                } else {
-                    setFinished(true);
-                }
-            };
-
-            const getStateBadge = () => {
-                const s = currentData.state;
-                if(s === 'new') return <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-blue-500/30">Novo</span>
-                if(s === 'learning') return <span className="bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-orange-500/30">Aprendendo</span>
-                if(s === 'review') return <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-emerald-500/30">Revisão</span>
-                if(s === 'relearning') return <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-red-500/30">Reaprender</span>
-                return null;
-            }
-
-            return (
-                <div className="max-w-3xl mx-auto mt-4 h-[80vh] flex flex-col perspective-1000 relative">
-                    
-                    {/* OVERLAY Dopaminérgico */}
-                    <div 
-                        className={`fixed inset-0 pointer-events-none z-[100] ${feedbackPulse.active ? 'transition-none' : 'transition-opacity duration-500 ease-out'}`}
-                        style={{
-                            boxShadow: `inset 0 0 120px ${feedbackPulse.color}, inset 0 0 20px ${feedbackPulse.color}`,
-                            opacity: feedbackPulse.active ? 1 : 0
-                        }}
-                    ></div>
-
-                    {requeueNotice && (
-                        <div className="absolute top-10 left-1/2 transform -translate-x-1/2 z-50 bg-slate-800 text-blue-400 px-4 py-2 rounded-full border border-blue-500/30 shadow-lg text-sm font-bold animate-fade-in flex items-center gap-2">
-                            <Repeat size={14} /> {requeueNotice}
-                        </div>
-                    )}
-
-                    <div className="w-full h-1 bg-slate-800 rounded-full mb-4 overflow-hidden"><div className="h-full bg-blue-500 transition-all duration-500 ease-out shadow-[0_0_10px_#3b82f6]" style={{ width: `${progress}%` }}></div></div>
-                    
-                    {/* Header de Status */}
-                    <div className="flex justify-between items-center text-xs text-slate-500 uppercase tracking-widest mb-4 px-2">
-                        <div className="flex items-center gap-4">
-                            <button onClick={handleUndo} disabled={index === 0} title="Desfazer (Ctrl+Z)" className={`flex items-center gap-1 transition-colors ${index === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`}><Undo2 size={16} /> <span className="hidden sm:inline">Desfazer</span></button>
-                            <div className="flex flex-col items-start">
-                                <div className="flex items-center gap-2">
-                                    <span className="bg-slate-900 px-2 py-1 rounded text-blue-400 border border-slate-800">{card.category}</span>
-                                    <span className="text-slate-600">/</span>
-                                    <span className="text-slate-300 truncate max-w-[150px]">{card.lesson || 'Geral'}</span>
-                                </div>
-                                {/* Tags Exibidas na Sessão de Estudo */}
-                                {card.tags && card.tags.length > 0 && (
-                                    <div className="flex items-center gap-1 mt-1">
-                                        {card.tags.map(t => (
-                                            <span key={t} className="bg-purple-900/30 text-purple-400 px-1.5 py-0.5 rounded text-[9px] border border-purple-500/30 flex items-center gap-0.5"><Tag size={8}/> {t}</span>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            {getStateBadge()}
-                            <div className="flex items-center gap-2 font-mono"><Layers size={14} className="text-slate-600"/><span>{queue.length - index} restantes</span></div>
-                        </div>
-                    </div>
-                    
-                    {userStats && userStats.currentStreak > 2 && (
-                        <div className="absolute -top-12 right-0 flex items-center gap-1 text-orange-500 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20 font-bold text-sm animate-pulse-slow">
-                            <Flame size={16} /> Streak: {userStats.currentStreak}
-                        </div>
-                    )}
-
-                    <div className="relative flex-1 group z-10">
-                        <div className={`w-full h-full duration-500 transform-style-3d transition-transform relative ${isFlipped ? 'rotate-y-180' : ''}`}>
-                            <div className="absolute inset-0 backface-hidden glass border border-slate-700 rounded-3xl p-6 md:p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden bg-slate-900/90">
-                                <div className="absolute top-4 right-4 text-slate-600 hover:text-blue-400 cursor-pointer transition-colors z-20" title="Ouvir Pergunta" onClick={(e) => { e.stopPropagation(); speakText(card.front); }}><Volume2 size={24} /></div>
-                                <div className="flex-1 w-full flex items-center justify-center overflow-hidden relative"><div className="w-full max-h-full overflow-y-auto custom-scrollbar px-4 flex flex-col items-center justify-center"><div className="prose prose-invert prose-lg md:prose-2xl font-medium text-white select-text w-full max-w-none leading-relaxed break-words" dangerouslySetInnerHTML={{__html: card.front || ''}}></div></div></div>
-                                <button onClick={() => setIsFlipped(true)} className="mt-6 bg-slate-800 hover:bg-slate-700 text-blue-400 px-8 py-3 rounded-full font-bold transition-all flex items-center gap-2 border border-slate-700 hover:border-blue-500/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)] group shrink-0 z-10"><Eye size={18} className="group-hover:scale-110 transition-transform" /> <span className="text-sm">Revelar</span></button>
-                            </div>
-                            <div className="absolute inset-0 backface-hidden rotate-y-180 glass border-2 border-blue-500/30 rounded-3xl p-6 md:p-8 flex flex-col items-center shadow-2xl overflow-hidden bg-slate-900/95">
-                                 <div className="absolute top-4 right-4 text-slate-600 hover:text-blue-400 cursor-pointer transition-colors z-20" title="Ouvir Resposta" onClick={(e) => { e.stopPropagation(); speakText(card.back); }}><Volume2 size={24} /></div>
-                                <div className="w-full border-b border-slate-800/80 pb-4 mb-4 text-center shrink-0"><span className="text-[10px] uppercase text-slate-600 font-bold tracking-widest block mb-1">Contexto (Pergunta)</span><div className="text-sm text-slate-400 opacity-70 line-clamp-2 px-4" dangerouslySetInnerHTML={{__html: card.front}}></div></div>
-                                <div className="flex-1 w-full overflow-hidden relative"><div className="w-full max-h-full overflow-y-auto custom-scrollbar px-4"><div className="prose prose-invert prose-lg text-slate-200 w-full max-w-none text-center select-text leading-relaxed break-words" dangerouslySetInnerHTML={{__html: card.back || ''}}></div></div></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div className={`grid grid-cols-4 gap-4 mt-6 transition-all duration-300 z-10 ${isFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-                        <button onClick={() => handleRate(1)} className="p-4 rounded-2xl bg-slate-900 border border-red-900/30 text-red-400 hover:bg-red-900/20 hover:border-red-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
-                            <span className="absolute top-2 right-2 text-[9px] bg-red-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 1</span>
-                            <span className="font-bold text-sm mb-1 group-hover:text-red-300">Errei</span>
-                            <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[1])}</span>
-                        </button>
-                        
-                        <button onClick={() => handleRate(2)} className="p-4 rounded-2xl bg-slate-900 border border-orange-900/30 text-orange-400 hover:bg-orange-900/20 hover:border-orange-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
-                            <span className="absolute top-2 right-2 text-[9px] bg-orange-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 2</span>
-                            <span className="font-bold text-sm mb-1 group-hover:text-orange-300">Difícil</span>
-                            <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[2])}</span>
-                        </button>
-                        
-                        <button onClick={() => handleRate(3)} className="p-4 rounded-2xl bg-slate-900 border border-blue-900/30 text-blue-400 hover:bg-blue-900/20 hover:border-blue-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
-                            <span className="absolute top-2 right-2 text-[9px] bg-blue-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 3</span>
-                            <span className="font-bold text-sm mb-1 group-hover:text-blue-300">Bom</span>
-                            <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[3])}</span>
-                        </button>
-                        
-                        <button onClick={() => handleRate(4)} className="p-4 rounded-2xl bg-slate-900 border border-emerald-900/30 text-emerald-400 hover:bg-emerald-900/20 hover:border-emerald-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
-                            <span className="absolute top-2 right-2 text-[9px] bg-emerald-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 4</span>
-                            <span className="font-bold text-sm mb-1 group-hover:text-emerald-300">Fácil</span>
-                            <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[4])}</span>
-                        </button>
-                    </div>
-                </div>
-            );
-        };
-
-        const formatCount = (count, colorClass) => {
-            if (count === 0) return <span className="text-slate-600 opacity-50">0</span>;
-            return <span className={`font-bold ${colorClass}`}>{count}</span>;
-        };
-
-        const DeckRow = ({ name, stats, level, isExpanded, onToggle, onStudy, hasChildren, icon }) => {
-            const paddingLeft = level === 0 ? 'pl-4 md:pl-6' : level === 1 ? 'pl-10 md:pl-14' : 'pl-16 md:pl-24';
-            return (
-               <div className={`grid grid-cols-12 gap-2 items-center py-3 border-b border-slate-800/50 hover:bg-slate-800/50 transition-colors group cursor-pointer ${paddingLeft}`} onClick={(e) => { e.stopPropagation(); onStudy(); }}>
-                   <div className="col-span-6 md:col-span-6 flex items-center gap-2">
-                       {hasChildren ? (
-                           <button onClick={(e) => { e.stopPropagation(); onToggle(); }} className="p-1 hover:bg-slate-700 rounded text-slate-500 hover:text-white transition-colors">
-                               <ChevronRight size={16} className={`transition-transform duration-200 ${isExpanded ? 'rotate-90 text-blue-400' : ''}`} />
-                           </button>
-                       ) : <div className="w-6 shrink-0"></div>}
-                       {icon && <span className="text-slate-500 shrink-0">{icon}</span>}
-                       <span className={`font-medium truncate ${level === 0 ? 'text-white text-base md:text-lg' : level === 1 ? 'text-slate-200 text-sm md:text-base' : 'text-slate-400 text-sm'}`} title={name}>{name}</span>
-                   </div>
-                   <div className="col-span-2 md:col-span-2 text-center font-mono text-sm">{formatCount(stats.n, 'text-blue-400')}</div>
-                   <div className="col-span-2 md:col-span-2 text-center font-mono text-sm">{formatCount(stats.l, 'text-orange-400')}</div>
-                   <div className="col-span-2 md:col-span-2 text-center font-mono text-sm">{formatCount(stats.r, 'text-emerald-400')}</div>
-               </div>
-            );
-        };
-
-        const SubcategoryNode = ({ name, stats, onStudy }) => (
-            <DeckRow name={name} stats={stats} level={2} onStudy={onStudy} hasChildren={false} icon={<Layers size={14}/>} />
-        );
-
-        const LessonNode = ({ name, data, category, startStudy }) => {
-            const [expanded, setExpanded] = React.useState(false);
-            return (
-                <>
-                    <DeckRow name={name} stats={data.stats} level={1} isExpanded={expanded} onToggle={() => setExpanded(!expanded)} onStudy={() => startStudy(category, name)} hasChildren={true} icon={<BookOpen size={16}/>} />
-                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                        {Object.keys(data.subcategories).sort().map(sub => (
-                            <SubcategoryNode key={sub} name={sub} stats={data.subcategories[sub].stats} onStudy={() => startStudy(category, name, sub)} />
-                        ))}
-                    </div>
-                </>
-            );
-        };
-
-        const CategoryNode = ({ name, data, startStudy }) => {
-            const [expanded, setExpanded] = React.useState(true);
-            return (
-                <div className="bg-slate-900/30">
-                    <DeckRow name={name} stats={data.stats} level={0} isExpanded={expanded} onToggle={() => setExpanded(!expanded)} onStudy={() => startStudy(name)} hasChildren={true} icon={<Folder size={18} className="text-amber-500"/>} />
-                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                        <div className="bg-slate-950/40">
-                            {Object.keys(data.lessons).sort().map(lesson => (
-                                <LessonNode key={lesson} name={lesson} data={data.lessons[lesson]} category={name} startStudy={startStudy} />
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const DeckTable = ({ structure, startStudy }) => {
-            if (Object.keys(structure).length === 0) {
-                return <div className="text-center p-12 border border-dashed border-slate-800 rounded-xl text-slate-600"><p>Nenhum dado no buffer. Acesse o painel Admin.</p></div>;
-            }
-
-            return (
-                <div className="glass rounded-xl overflow-hidden border border-slate-700/50 shadow-2xl animate-slide-up">
-                    <div className="grid grid-cols-12 gap-2 p-3 md:p-4 border-b border-slate-700 bg-slate-900/90 text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-10">
-                        <div className="col-span-6 md:col-span-6 pl-4 md:pl-6">Baralho (Matéria / Aula / Tópico)</div>
-                        <div className="col-span-2 md:col-span-2 text-center text-blue-400" title="Cards Novos">Novo</div>
-                        <div className="col-span-2 md:col-span-2 text-center text-orange-400" title="Cards em Aprendizado que vencem hoje">Aprender</div>
-                        <div className="col-span-2 md:col-span-2 text-center text-emerald-400" title="Cards para Revisão que vencem hoje">Revisar</div>
-                    </div>
-                    <div className="divide-y divide-slate-800/80">
-                        {Object.keys(structure).sort().map(cat => (
-                            <CategoryNode key={cat} name={cat} data={structure[cat]} startStudy={startStudy} />
-                        ))}
-                    </div>
-                </div>
-            );
-        }
-
-        // --- COMPONENTES EXTRAÍDOS (EVITAM O ANTI-PATTERN) ---
-        
-        const AuthScreen = ({ onLogin, guestMode }) => {
-            const [isRegister, setIsRegister] = React.useState(false);
-            const [email, setEmail] = React.useState("");
-            const [password, setPassword] = React.useState("");
-            const [loading, setLoading] = React.useState(false);
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                setLoading(true);
-                try {
-                    if (isRegister) await createUserWithEmailAndPassword(auth, email, password);
-                    else await signInWithEmailAndPassword(auth, email, password);
-                    onLogin();
-                } catch (err) { alert("Erro: " + err.message); } finally { setLoading(false); }
-            };
-            return (
-                <div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 relative overflow-hidden">
-                    <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none"></div>
-                    <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[100px] pointer-events-none"></div>
-                    <div className="w-full max-w-md glass p-8 rounded-2xl shadow-2xl relative z-10 animate-slide-up">
-                        <div className="text-center mb-8">
-                            <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-blue-500/30"><Cpu size={32} /></div>
-                            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">L1 Cache <span className="text-blue-400">v1.1</span></h1>
-                            <p className="text-slate-400 text-sm">Engine SM-2 Real-time para máxima retenção em Ciência da Computação.</p>
-                        </div>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-3">
-                                <input type="email" placeholder="Email Acadêmico" className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 p-3 rounded-xl text-white outline-none transition-all placeholder:text-slate-600" value={email} onChange={e => setEmail(e.target.value)} />
-                                <input type="password" placeholder="Senha" className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 p-3 rounded-xl text-white outline-none transition-all placeholder:text-slate-600" value={password} onChange={e => setPassword(e.target.value)} />
-                            </div>
-                            <button disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold p-3.5 rounded-xl shadow-lg shadow-blue-900/20 transition-all transform hover:scale-[1.02] disabled:opacity-50">{loading ? "Carregando Algoritmo..." : (isRegister ? "Registrar Matrícula" : "Login no Sistema")}</button>
-                        </form>
-                        <div className="mt-6 flex justify-between text-sm text-slate-500 pt-4 border-t border-slate-700/50">
-                            <button onClick={() => setIsRegister(!isRegister)} className="hover:text-blue-400 transition-colors">{isRegister ? "Já tenho conta" : "Criar nova conta"}</button>
-                            <button onClick={guestMode} className="hover:text-white transition-colors">Acesso Visitante</button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const LeaderboardView = () => {
-            const [leaders, setLeaders] = React.useState([]);
-            const [loading, setLoading] = React.useState(true);
-            
-            const calculateLast31Days = (dailyActivity) => {
-                if (!dailyActivity) return 0;
-                let total = 0;
-                const today = new Date();
-                for (let i = 0; i < 31; i++) {
-                    const targetDate = new Date(today);
-                    targetDate.setDate(targetDate.getDate() - i);
-                    const dateStr = targetDate.toISOString().split('T')[0];
-                    if (dailyActivity[dateStr]) {
-                        total += dailyActivity[dateStr];
-                    }
-                }
-                return total;
-            };
-
-            React.useEffect(() => {
-                const q = query(collection(db, 'leaderboard'));
-                const unsub = onSnapshot(q, (snap) => {
-                    const fetchedLeaders = snap.docs.map(d => {
-                        const data = d.data();
-                        return {
-                            ...data,
-                            cardsSeen: data.cardsSeen || data.total || 0,
-                            retention: data.retention || 0,
-                            timeStudied: data.timeStudied || 0,
-                            currentStreak: data.currentStreak || 0,
-                            dailyActivity: data.dailyActivity || {}
-                        };
-                    });
-                    
-                    setLeaders(fetchedLeaders.sort((a,b) => (b.cardsSeen - a.cardsSeen) || (b.retention - a.retention)).slice(0, 50));
-                    setLoading(false);
-                }, (error) => {
-                    console.error("Erro Leaderboard onSnapshot:", error);
-                    setLoading(false);
-                });
-
-                return () => unsub(); 
-            }, []);
-
-            return (
-                <div className="max-w-5xl mx-auto animate-fade-in">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 p-6 glass rounded-2xl border border-slate-700/50">
-                        <div className="flex items-center gap-4">
-                            <div className="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative">
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
-                                <Trophy className="text-yellow-500" size={32}/>
-                            </div>
-                            <div>
-                                <h2 className="text-3xl font-bold text-white tracking-tight">Leaderboard Global <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full uppercase ml-2 align-middle shadow-[0_0_10px_rgba(239,68,68,0.5)]">Ao Vivo</span></h2>
-                                <p className="text-slate-400 text-sm mt-1">Ranking atualizado em tempo real baseado em constância, volume e precisão.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="glass rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50 overflow-x-auto">
-                        <table className="w-full text-left border-collapse min-w-[800px]">
-                            <thead className="bg-slate-900/90 text-slate-400 uppercase text-[10px] md:text-xs font-bold tracking-wider">
-                                <tr>
-                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center w-16">Rank</th>
-                                    <th className="p-4 md:p-5 border-b border-slate-800">Estudante</th>
-                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1"><Layers size={14}/> Cards (XP)</div></th>
-                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1"><Clock size={14}/> Tempo</div></th>
-                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1 text-orange-500"><Flame size={14}/> Streak</div></th>
-                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1"><TrendingUp size={14}/> Últ. 31 Dias</div></th>
-                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1"><Target size={14}/> Retenção</div></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-800/50 transition-all">
-                                {loading ? (
-                                    <tr><td colSpan="7" className="p-8 text-center text-slate-500">Sincronizando dados ao vivo...</td></tr>
-                                ) : leaders.map((l, i) => (
-                                    <tr key={l.email || i} className={`transition-colors hover:bg-slate-800/40 ${i === 0 ? 'bg-yellow-500/5' : i === 1 ? 'bg-slate-400/5' : i === 2 ? 'bg-amber-700/5' : ''}`}>
-                                        <td className="p-4 md:p-5 text-center font-bold text-slate-500 font-mono text-lg">
-                                            {i === 0 ? <span className="text-yellow-500">1</span> : i === 1 ? <span className="text-slate-300">2</span> : i === 2 ? <span className="text-amber-600">3</span> : i+1}
-                                        </td>
-                                        <td className="p-4 md:p-5 text-white font-medium flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-400">
-                                                {l.email ? l.email.charAt(0).toUpperCase() : '?'}
-                                            </div>
-                                            {l.email ? l.email.split('@')[0] : 'Anônimo'}
-                                        </td>
-                                        <td className="p-4 md:p-5 text-center text-blue-400 font-mono font-bold">{l.cardsSeen.toLocaleString('pt-BR')}</td>
-                                        <td className="p-4 md:p-5 text-center text-slate-300 font-mono text-sm">{formatDuration(l.timeStudied || 0)}</td>
-                                        <td className="p-4 md:p-5 text-center">
-                                            <span className={`inline-flex items-center gap-1 font-mono font-bold ${l.currentStreak >= 3 ? 'text-orange-500' : 'text-slate-500'}`}>
-                                                {l.currentStreak > 0 && <Flame size={12} className={l.currentStreak >= 3 ? 'animate-pulse' : ''}/>} 
-                                                {l.currentStreak}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 md:p-5 text-center text-slate-300 font-mono text-sm">{calculateLast31Days(l.dailyActivity).toLocaleString('pt-BR')}</td>
-                                        <td className="p-4 md:p-5 text-center">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold border inline-block min-w-[60px] ${l.retention > 80 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' : l.retention > 50 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                                                {l.retention ? l.retention.toFixed(1) : 0}%
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            );
-        };
-
-        const AdminPanel = ({ cards, onExit }) => {
-            const [form, setForm] = React.useState({ front: '', back: '', category: 'Geral', lesson: 'Conteúdo Geral', subcategory: '', tags: [] });
-            const [tagInput, setTagInput] = React.useState('');
-            const [editingId, setEditingId] = React.useState(null);
-            
-            const [filterCategory, setFilterCategory] = React.useState('Todos');
-            const [filterLesson, setFilterLesson] = React.useState('Todos');
-            const [filterSubcategory, setFilterSubcategory] = React.useState('Todos');
-            const [filterTag, setFilterTag] = React.useState('Todas');
-            const [searchTerm, setSearchTerm] = React.useState('');
-            
-            // --- CASCADING FILTERS LOGIC ---
-            // As opções baseiam-se SOMENTE nos filtros parentes. Assim previne combinações impossíveis.
-            const existingCategories = [...new Set(cards.map(c => normalize(c.category)))].filter(Boolean).sort();
-            
-            const existingLessons = [...new Set(cards
-                .filter(c => filterCategory === 'Todos' || normalize(c.category) === filterCategory)
-                .map(c => normalize(c.lesson || 'Conteúdo Geral')))]
-                .filter(Boolean).sort();
-            
-            const existingSubcategories = [...new Set(cards
-                .filter(c => (filterCategory === 'Todos' || normalize(c.category) === filterCategory) &&
-                             (filterLesson === 'Todos' || normalize(c.lesson || 'Conteúdo Geral') === filterLesson))
-                .map(c => normalize(c.subcategory || 'Geral')))]
-                .filter(Boolean).sort();
-            
-            const existingAdminTags = [...new Set(cards
-                .filter(c => (filterCategory === 'Todos' || normalize(c.category) === filterCategory) &&
-                             (filterLesson === 'Todos' || normalize(c.lesson || 'Conteúdo Geral') === filterLesson) &&
-                             (filterSubcategory === 'Todos' || normalize(c.subcategory || 'Geral') === filterSubcategory))
-                .flatMap(c => c.tags || []))]
-                .filter(Boolean).sort();
-
-            // Lógica de reset em cadeia quando um filtro superior muda
-            const handleCategoryChange = (e) => {
-                setFilterCategory(e.target.value);
-                setFilterLesson('Todos');
-                setFilterSubcategory('Todos');
-                setFilterTag('Todas');
-            };
-
-            const handleLessonChange = (e) => {
-                setFilterLesson(e.target.value);
-                setFilterSubcategory('Todos');
-                setFilterTag('Todas');
-            };
-
-            const handleSubcategoryChange = (e) => {
-                setFilterSubcategory(e.target.value);
-                setFilterTag('Todas');
-            };
-
-            const filteredCards = cards.filter(c => {
-                const cCat = normalize(c.category);
-                const cLess = normalize(c.lesson || 'Conteúdo Geral');
-                const cSub = normalize(c.subcategory || 'Geral');
-                const cTags = c.tags || [];
-
-                const matchCategory = filterCategory === 'Todos' || cCat === filterCategory;
-                const matchLesson = filterLesson === 'Todos' || cLess === filterLesson;
-                const matchSubcategory = filterSubcategory === 'Todos' || cSub === filterSubcategory;
-                const matchTag = filterTag === 'Todas' || cTags.includes(filterTag);
-                const matchSearch = searchTerm === '' || 
-                                    (c.front || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                    (c.back || '').toLowerCase().includes(searchTerm.toLowerCase());
-                
-                return matchCategory && matchLesson && matchSubcategory && matchTag && matchSearch;
-            });
-
-            // Adiciona tag via Enter ou Vírgula
-            const handleAddTag = (e) => {
-                if (e.key === 'Enter' || e.key === ',') {
-                    e.preventDefault();
-                    const newTag = tagInput.trim().toLowerCase();
-                    if (newTag && !form.tags.includes(newTag)) {
-                        setForm(prev => ({ ...prev, tags: [...prev.tags, newTag] }));
-                    }
-                    setTagInput('');
-                }
-            };
-
-            const removeTag = (tagToRemove) => {
-                setForm(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tagToRemove) }));
-            };
-
-            const handleSave = async (e) => {
-                e.preventDefault();
-                if(!form.front || !form.back) {
-                      alert("Por favor, preencha a Pergunta (Frente) e a Resposta (Verso) antes de salvar.");
-                      return;
-                }
-                try {
-                    const dataToSave = {
-                        front: form.front,
-                        back: form.back,
-                        category: normalize(form.category || 'Geral'),
-                        lesson: normalize(form.lesson || 'Conteúdo Geral'),
-                        subcategory: normalize(form.subcategory || 'Geral'),
-                        tags: form.tags 
-                    };
-
-                    if (editingId) {
-                        await updateDoc(doc(db, "cards", editingId), dataToSave);
-                        setEditingId(null);
-                    } else {
-                        await addDoc(collection(db, "cards"), { ...dataToSave, createdAt: serverTimestamp() });
-                    }
-                    setForm(prev => ({ ...prev, front: '', back: '', tags: [] })); 
-                } catch (e) { alert("Erro ao salvar: " + e.message); }
-            };
-
-            const handleEdit = (card) => { 
-                setForm({
-                    front: card.front,
-                    back: card.back,
-                    category: normalize(card.category),
-                    lesson: normalize(card.lesson || 'Conteúdo Geral'),
-                    subcategory: normalize(card.subcategory),
-                    tags: card.tags || [] 
-                }); 
-                setEditingId(card.id); 
-            };
-            
-            const handleDelete = async (id) => { 
-                if(confirm("Deletar este node da base de conhecimento?")) { 
-                    await deleteDoc(doc(db, "cards", id)); 
-                } 
-            };
-
-            return (
-                <div className="glass p-6 rounded-2xl border border-slate-700 min-h-screen md:h-[calc(100vh-100px)] flex flex-col shadow-2xl animate-fade-in">
-                    <div className="flex justify-between mb-4 border-b border-slate-700 pb-4 flex-shrink-0">
-                        <h2 className="text-xl font-bold text-amber-500 flex items-center gap-2"><Lock size={18}/> {editingId ? 'Editando Node' : 'Console Admin (Real-time)'}</h2>
-                        <button onClick={onExit} className="hover:text-white text-slate-400 transition-colors bg-slate-800 p-2 rounded-lg"><X size={20} /></button>
-                    </div>
-                    <div className="flex flex-col md:flex-row gap-6 flex-1 overflow-hidden">
-                        
-                        {/* SIDEBAR DE LISTAGEM */}
-                        <div className="w-full md:w-1/3 flex flex-col border-b md:border-b-0 md:border-r border-slate-700/50 pb-4 md:pr-4 h-64 md:h-auto">
-                            <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mb-3 flex-shrink-0 space-y-3">
-                                <div className="flex items-center gap-2"><Filter size={16} className="text-slate-500" /><span className="text-xs text-slate-400 font-bold uppercase">Filtros Avançados (Cascata)</span></div>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    <select value={filterCategory} onChange={handleCategoryChange} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 outline-none focus:border-blue-500 transition-colors">
-                                        <option value="Todos">Todas Matérias</option>
-                                        {existingCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                    </select>
-                                    <select value={filterLesson} onChange={handleLessonChange} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 outline-none focus:border-blue-500 transition-colors">
-                                        <option value="Todos">Todas Aulas</option>
-                                        {existingLessons.map(l => <option key={l} value={l}>{l}</option>)}
-                                    </select>
-                                    <select value={filterSubcategory} onChange={handleSubcategoryChange} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 outline-none focus:border-purple-500 transition-colors">
-                                        <option value="Todos">Todos Tópicos</option>
-                                        {existingSubcategories.map(sub => <option key={sub} value={sub}>{sub}</option>)}
-                                    </select>
-                                    <select value={filterTag} onChange={(e) => setFilterTag(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 outline-none focus:border-purple-500 transition-colors">
-                                        <option value="Todas">Qualquer Tag</option>
-                                        {existingAdminTags.map(t => <option key={t} value={t}>#{t}</option>)}
-                                    </select>
-                                </div>
-                                <div className="relative">
-                                    <input type="text" placeholder="Buscar no texto (frente ou verso)..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 pl-8 outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"/>
-                                    <Search size={14} className="absolute left-2.5 top-2.5 text-slate-500 pointer-events-none"/>
-                                </div>
-                                <div className="text-xs text-slate-500 text-right font-mono">{filteredCards.length} nodes listados (Ao vivo)</div>
-                            </div>
-                            <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                                {filteredCards.map(c => (
-                                    <div key={c.id} onClick={() => handleEdit(c)} className={`p-3 rounded-lg text-sm border cursor-pointer transition-all group ${editingId === c.id ? 'bg-blue-900/20 border-blue-500/50' : 'bg-slate-900/40 border-slate-800 hover:border-slate-600'}`}>
-                                        <div className="flex justify-between items-start">
-                                            <div className="w-full">
-                                                <div className="flex flex-col mb-1">
-                                                    <span className="text-blue-400 text-[10px] font-mono uppercase tracking-wider opacity-70 truncate">{c.category}</span>
-                                                    <span className="text-slate-500 text-[10px] font-bold">{c.lesson} &gt; {c.subcategory || 'Geral'}</span>
-                                                </div>
-                                                <div className="text-slate-300 font-medium line-clamp-2 text-xs opacity-80" dangerouslySetInnerHTML={{__html: (c.front || '').replace(/<[^>]*>?/gm, '')}}></div>
-                                                
-                                                {c.tags && c.tags.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1 mt-2">
-                                                        {c.tags.map(t => <span key={t} className="bg-purple-900/30 text-purple-400 px-1.5 py-0.5 rounded text-[9px] border border-purple-500/30">#{t}</span>)}
-                                                    </div>
-                                                )}
-
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-end gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }} className="text-red-400 hover:bg-red-900/30 p-1.5 rounded-lg transition-colors" title="Excluir"><Trash2 size={14}/></button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* FORMULÁRIO DE EDIÇÃO */}
-                        <div className="flex-1 overflow-y-auto pl-0 md:pl-2 custom-scrollbar pb-20 md:pb-0">
-                             <form onSubmit={handleSave} className="space-y-4 bg-slate-900/20 p-2 rounded-xl">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Matéria (Deck)</label>
-                                        <input className="w-full bg-slate-800 p-3 rounded-lg text-white border border-slate-700 focus:border-blue-500 outline-none transition-all font-mono text-sm" placeholder="Ex: Sistemas Operacionais" value={form.category} onChange={e => setForm(prev => ({...prev, category: e.target.value}))} list="category-suggestions" />
-                                        <datalist id="category-suggestions">{existingCategories.map((cat, i) => <option key={i} value={cat} />)}</datalist>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Aula (Lesson)</label>
-                                        <input className="w-full bg-slate-800 p-3 rounded-lg text-white border border-slate-700 focus:border-blue-500 outline-none transition-all font-mono text-sm" placeholder="Ex: Aula 01 - Introdução" value={form.lesson} onChange={e => setForm(prev => ({...prev, lesson: e.target.value}))} list="lesson-suggestions" />
-                                        <datalist id="lesson-suggestions">{existingLessons.map((l, i) => <option key={l} value={l} />)}</datalist>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Tópico</label>
-                                        <input className="w-full bg-slate-800 p-3 rounded-lg text-white border border-slate-700 focus:border-blue-500 outline-none transition-all font-mono text-sm" placeholder="Ex: Conceitos Básicos" value={form.subcategory} onChange={e => setForm(prev => ({...prev, subcategory: e.target.value}))} list="subcategory-suggestions" />
-                                        <datalist id="subcategory-suggestions">{existingSubcategories.map((sub, i) => <option key={sub} value={sub} />)}</datalist>
-                                    </div>
-                                </div>
-                                
-                                {/* INPUT DINÂMICO DE TAGS */}
-                                <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
-                                    <label className="text-xs font-bold text-purple-400 uppercase ml-1 mb-2 flex items-center gap-1"><Tag size={14}/> Indexação / Tags (Pressione Enter)</label>
-                                    
-                                    <div className="flex flex-wrap gap-2 mb-2">
-                                        {form.tags.map(t => (
-                                            <span key={t} className="bg-purple-900/60 text-purple-300 px-3 py-1 rounded-md text-sm flex items-center gap-2 border border-purple-500/40">
-                                                #{t} <button type="button" onClick={() => removeTag(t)} className="hover:text-red-400 transition-colors"><X size={14}/></button>
-                                            </span>
-                                        ))}
-                                    </div>
-                                    <input 
-                                        type="text" 
-                                        className="w-full bg-slate-900 p-3 rounded-lg text-white border border-slate-700 focus:border-purple-500 outline-none transition-all font-mono text-sm placeholder:text-slate-600" 
-                                        placeholder="Digite uma tag e pressione Enter (ex: algoritmos)" 
-                                        value={tagInput} 
-                                        onChange={e => setTagInput(e.target.value)} 
-                                        onKeyDown={handleAddTag}
-                                        list="tag-suggestions"
-                                    />
-                                    <datalist id="tag-suggestions">{existingAdminTags.map((t, i) => <option key={i} value={t} />)}</datalist>
-                                </div>
-
-                                <div><label className="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Input: Pergunta (Frente)</label><RichTextEditor value={form.front} onChange={(val) => setForm(prev => ({...prev, front: val}))} /></div>
-                                <div><label className="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Output: Resposta (Verso)</label><RichTextEditor value={form.back} onChange={(val) => setForm(prev => ({...prev, back: val}))} /></div>
-                                
-                                <div className="flex gap-3 pt-4 sticky bottom-0 bg-slate-900/90 p-4 border-t border-slate-700 -mx-2 -mb-2 rounded-b-xl backdrop-blur z-20">
-                                    {editingId && (<button type="button" onClick={() => { setEditingId(null); setForm(prev => ({ ...prev, front: '', back: '', category: 'Geral', lesson: 'Conteúdo Geral', subcategory: '', tags: [] })); }} className="w-1/3 bg-slate-700 hover:bg-slate-600 text-white font-bold p-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm md:text-base"><RotateCcw size={16}/> Cancelar</button>)}
-                                    <button type="submit" className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold p-3 rounded-lg shadow-lg shadow-blue-900/20 transition-all flex justify-center gap-2 items-center transform hover:scale-[1.01] text-sm md:text-base">{editingId ? <><Save size={18} /> Salvar Alterações</> : <><Plus size={18} /> Inserir no Banco de Dados</>}</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const App = () => {
-            const [user, setUser] = React.useState(null);
-            const [isAdmin, setIsAdmin] = React.useState(false);
-            const [view, setView] = React.useState("loading"); 
-            const [cards, setCards] = React.useState([]);
-            const [reviews, setReviews] = React.useState({});
-            const [userStats, setUserStats] = React.useState(null);
-            const [studyQueue, setStudyQueue] = React.useState([]);
-            const [customStudyOpen, setCustomStudyOpen] = React.useState(false);
-            
-            // Effect 1: Auth & Global Cards (Real-time listener)
-            React.useEffect(() => {
-                const unsubAuth = onAuthStateChanged(auth, (currentUser) => {
-                    setUser(currentUser);
-                    if (currentUser) {
-                        setIsAdmin(currentUser.email?.endsWith("@userpro.com") || false);
-                    } else {
-                        setIsAdmin(false);
-                        setReviews({});
-                        setUserStats(null);
-                    }
-                    setView(currentUser ? "decks" : "auth");
-                });
-
-                const qCards = query(collection(db, "cards"));
-                const unsubCards = onSnapshot(qCards, (snapshot) => {
-                    const loadedCards = snapshot.docs.map(doc => {
-                        const data = doc.data();
-                        return { 
-                            id: doc.id, 
-                            ...data,
-                            category: normalize(data.category || 'Sem Categoria'),
-                            lesson: normalize(data.lesson || 'Conteúdo Geral'),
-                            subcategory: normalize(data.subcategory || 'Geral'),
-                            tags: Array.isArray(data.tags) ? data.tags : [] 
-                        };
-                    });
-                    setCards(loadedCards);
-                }, (error) => console.error("Erro cards onSnapshot:", error));
-
-                return () => {
-                    unsubAuth();
-                    unsubCards();
-                };
-            }, []);
-
-            // Effect 2: User specific data (Real-time listeners)
-            React.useEffect(() => {
-                if (!user) return;
-
-                const qReviews = query(collection(db, `users/${user.uid}/reviews`));
-                const unsubReviews = onSnapshot(qReviews, (snapshot) => {
-                    const userReviews = {};
-                    snapshot.forEach(doc => { userReviews[doc.id] = doc.data(); });
-                    setReviews(userReviews);
-                }, (error) => console.error("Erro reviews onSnapshot:", error));
-                
-                const statsRef = doc(db, 'leaderboard', user.uid);
-                const unsubStats = onSnapshot(statsRef, async (docSnap) => {
-                    if (!docSnap.exists()) {
-                        const defaultStats = { 
-                            email: user.email, 
-                            cardsSeen: 0, 
-                            correctAnswers: 0, 
-                            retention: 0, 
-                            timeStudied: 0, 
-                            currentStreak: 0,
-                            dailyActivity: {}
-                        };
-                        await setDoc(statsRef, { ...defaultStats, lastActive: serverTimestamp() });
-                    } else {
-                        setUserStats(docSnap.data());
-                    }
-                }, (error) => console.error("Erro stats onSnapshot:", error));
-
-                return () => {
-                    unsubReviews();
-                    unsubStats();
-                };
-            }, [user]);
-
-            const getDecksStructure = () => {
-                const structure = {};
-                const now = new Date();
-                const endOfToday = new Date();
-                endOfToday.setHours(23, 59, 59, 999);
-
-                cards.forEach(card => {
-                    const cat = normalize(card.category || "Sem Categoria");
-                    const lesson = normalize(card.lesson || "Conteúdo Geral");
-                    const sub = normalize(card.subcategory || "Geral");
-
-                    if (!structure[cat]) structure[cat] = { stats: { n:0, l:0, r:0 }, lessons: {} };
-                    if (!structure[cat].lessons[lesson]) structure[cat].lessons[lesson] = { stats: { n:0, l:0, r:0 }, subcategories: {} };
-                    if (!structure[cat].lessons[lesson].subcategories[sub]) structure[cat].lessons[lesson].subcategories[sub] = { stats: { n:0, l:0, r:0 }, cards: [] };
-
-                    let isNew = false, isLearn = false, isReview = false;
-                    const rev = reviews[card.id];
-
-                    if (!rev) {
-                        isNew = true; 
-                    } else {
-                        let dueDate = rev.dueDate;
-                        if (dueDate && typeof dueDate.toDate === 'function') dueDate = dueDate.toDate();
-                        else dueDate = new Date(dueDate || now);
-
-                        if (dueDate <= endOfToday) {
-                            if (rev.state === 'learning' || rev.state === 'relearning') isLearn = true;
-                            else if (rev.state === 'review') isReview = true;
-                            else if (rev.state === 'new') isNew = true;
-                        }
-                    }
-
-                    if (isNew) {
-                        structure[cat].stats.n++;
-                        structure[cat].lessons[lesson].stats.n++;
-                        structure[cat].lessons[lesson].subcategories[sub].stats.n++;
-                    } else if (isLearn) {
-                        structure[cat].stats.l++;
-                        structure[cat].lessons[lesson].stats.l++;
-                        structure[cat].lessons[lesson].subcategories[sub].stats.l++;
-                    } else if (isReview) {
-                        structure[cat].stats.r++;
-                        structure[cat].lessons[lesson].stats.r++;
-                        structure[cat].lessons[lesson].subcategories[sub].stats.r++;
-                    }
-
-                    structure[cat].lessons[lesson].subcategories[sub].cards.push(card);
-                });
-                return structure;
-            };
-
-            const startCustomStudy = (settings) => {
-                let queue = cards;
-                const now = new Date();
-                
-                if (settings.category !== 'All') {
-                    queue = queue.filter(c => normalize(c.category) === normalize(settings.category));
-                }
-                
-                if (settings.tag !== 'All') {
-                    queue = queue.filter(c => (c.tags || []).includes(settings.tag));
-                }
-
-                if (settings.mode === 'new') {
-                    queue = queue.filter(c => !reviews[c.id]);
-                } else if (settings.mode === 'due') {
-                    queue = queue.filter(c => {
-                        const r = reviews[c.id];
-                        if (!r) return true;
-                        let dueDate;
-                        if (r.dueDate && typeof r.dueDate.toDate === 'function') dueDate = r.dueDate.toDate();
-                        else dueDate = new Date(r.dueDate || now);
-                        return dueDate <= now;
-                    });
-                } else if (settings.mode === 'cram') {
-                    queue = queue.sort(() => Math.random() - 0.5);
-                }
-                if (settings.mode !== 'cram') queue = queue.sort(() => Math.random() - 0.5);
-                
-                queue = queue.slice(0, settings.limit);
-                if (queue.length === 0) { alert("Nenhum card encontrado com esses filtros."); return; }
-                
-                setStudyQueue(queue);
-                setCustomStudyOpen(false);
-                setView("study");
-            };
-
-            const startStudy = (category, lesson = null, subcategory = null) => {
-                const now = new Date();
-                let queue = cards.filter(c => {
-                    if (category && normalize(c.category) !== normalize(category)) return false;
-                    if (lesson && normalize(c.lesson || 'Conteúdo Geral') !== normalize(lesson)) return false;
-                    if (subcategory && normalize(c.subcategory) !== normalize(subcategory)) return false;
-                    return true;
-                });
-
-                if (user) {
-                    queue = queue.filter(card => {
-                        const review = reviews[card.id];
-                        if (!review) return true; 
-                        
-                        let dueDate;
-                        if (review.dueDate && typeof review.dueDate.toDate === 'function') dueDate = review.dueDate.toDate();
-                        else dueDate = new Date(review.dueDate || now);
-                        
-                        return dueDate <= now; 
-                    });
-                } else {
-                    queue = queue.sort(() => Math.random() - 0.5);
-                }
-                
-                if (queue.length === 0) {
-                    if (confirm("Você já concluiu todos os cards vencidos até este momento exato.\n\nOs cards em aprendizado que retornam daqui a pouco estarão aguardando o tempo acabar. \n\nDeseja forçar uma revisão extra de fixação agora (Modo Cram)?")) {
-                        startCustomStudy({ category: category || 'All', mode: 'cram', limit: 20, tag: 'All' });
-                    }
-                    return;
-                }
-                setStudyQueue(queue.sort(() => Math.random() - 0.5));
-                setView("study");
-            };
-
-            if (view === "loading") {
-                return (
-                    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-blue-500">
-                        <div className="relative">
-                            <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
-                            <Cpu size={24} className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" />
-                        </div>
-                        <span className="font-mono text-sm tracking-[0.2em] mt-6 text-blue-400">INICIALIZANDO O L1 CACHE v1.1 (TAGS)...</span>
-                    </div>
-                );
-            }
-
-            if (view === "auth") return <AuthScreen onLogin={() => setView("decks")} guestMode={() => setView("decks")} />;
-
-            const structure = getDecksStructure();
-            
-            let totalDue = 0;
-            if(user) {
-                Object.values(structure).forEach(cat => {
-                   totalDue += (cat.stats.n + cat.stats.l + cat.stats.r);
-                });
-            }
-
-            const allTags = [...new Set(cards.flatMap(c => c.tags || []))].sort();
-
-            return (
-                <div className="min-h-screen flex flex-col bg-slate-950 text-slate-200 font-sans selection:bg-purple-500/30">
-                    <nav className="border-b border-slate-800 bg-slate-950/80 sticky top-0 z-50 backdrop-blur-md">
-                        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-                            <div className="flex items-center gap-3 font-bold text-xl cursor-pointer group" onClick={() => setView("decks")}>
-                                <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-2 rounded-lg shadow-lg shadow-blue-900/20 group-hover:scale-105 transition-transform">
-                                    <Cpu size={20} className="text-white" />
-                                </div>
-                                <span className="text-white tracking-tight">L1 <span className="text-blue-500">Cache</span> <span className="text-[10px] bg-slate-800 px-1 py-0.5 rounded text-blue-400 align-top">RT</span></span>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                {user && <button onClick={() => setView("leaderboard")} className="text-yellow-500 flex items-center gap-1.5 text-sm hover:text-yellow-400 font-medium bg-yellow-500/10 px-3 py-1.5 rounded-full border border-yellow-500/20 transition-all hover:bg-yellow-500/20"><Trophy size={14} /> Ranking Global</button>}
-                                {isAdmin && <button onClick={() => setView("admin")} className="text-amber-500 hover:text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20 transition-all flex items-center gap-1.5 text-sm"><Lock size={14} /> Admin</button>}
-                                {user ? <button onClick={() => signOut(auth)} className="text-slate-400 hover:text-red-400 transition-colors" title="Sair"><LogOut size={20}/></button> : null}
-                            </div>
-                        </div>
-                    </nav>
-
-                    <main className="flex-1 max-w-6xl mx-auto w-full p-4 relative">
-                        {view === "decks" && (
-                            <div className="animate-fade-in space-y-6">
-                                <header className="border-b border-slate-800 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                    <div>
-                                        <h2 className="text-3xl font-bold text-white mb-2">Painel de Controle</h2>
-                                        <div className="flex gap-6 text-sm text-slate-400 font-mono">
-                                            <div className="flex items-center gap-2"><div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div> {cards.length} Cards (Live)</div>
-                                            <div className="flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div> {Object.keys(reviews).length} Memorizados</div>
-                                            {user && totalDue === 0 && <div className="flex items-center gap-2 text-emerald-400"><Check size={14}/> Tudo em dia!</div>}
-                                        </div>
-                                    </div>
-                                    <button onClick={() => setCustomStudyOpen(true)} className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-5 py-3 rounded-xl font-bold transition-all flex items-center gap-2 hover:border-blue-500"><Settings size={18} className="text-blue-400"/> Estudo Personalizado</button>
-                                </header>
-                                <Heatmap reviews={reviews} />
-                                <DeckTable structure={structure} startStudy={startStudy} />
-                                <CustomStudyModal 
-                                    isOpen={customStudyOpen} 
-                                    onClose={() => setCustomStudyOpen(false)} 
-                                    onStart={startCustomStudy} 
-                                    categories={[...new Set(cards.map(c => normalize(c.category)))]} 
-                                    tags={allTags} 
-                                />
-                            </div>
-                        )}
-                        {view === "study" && <StudySession initialQueue={studyQueue} user={user} reviews={reviews} setReviews={setReviews} userStats={userStats} setUserStats={setUserStats} onFinish={() => setView("decks")} />}
-                        {view === "leaderboard" && <LeaderboardView />}
-                        {view === "admin" && isAdmin && <AdminPanel cards={cards} onExit={() => setView("decks")} />}
-                    </main>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<ErrorBoundary><App /></ErrorBoundary>);
-    </script>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+
+        // --- IMPORTS ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, updateDoc, serverTimestamp, query, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag } from "https://esm.sh/lucide-react@0.344.0?bundle";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyClIIJkYOmAvEKPtXvG-SIi9SzxQpaBN9s",
+            authDomain: "ankidigital.firebaseapp.com",
+            projectId: "ankidigital",
+            storageBucket: "ankidigital.firebasestorage.app",
+            messagingSenderId: "407660648093",
+            appId: "1:407660648093:web:b7bf69730e90a28cb36674"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const normalize = (val) => String(val || '').trim();
+
+        // --- ERROR BOUNDARY ---
+        class ErrorBoundary extends React.Component {
+            constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+            static getDerivedStateFromError(error) { return { hasError: true, error }; }
+            componentDidCatch(error, errorInfo) { console.error("React Error:", error, errorInfo); }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="min-h-screen flex items-center justify-center bg-slate-950 text-red-400 p-8 text-center">
+                            <div><h1 className="text-2xl font-bold mb-2">System Failure</h1><p className="mb-4">Kernel Panic. Reinicie o sistema.</p><button onClick={() => window.location.reload()} className="bg-red-600 text-white px-6 py-2 rounded font-bold hover:bg-red-500">Reboot</button></div>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
+        // --- ENGINE ANKI (SM-2 Exato) ---
+        const LEARNING_STEPS = [1, 10]; // em minutos
+        const GRADUATING_INTERVAL = 1; // dias
+        const EASY_INTERVAL = 4; // dias
+        const STARTING_EASE = 2.5; 
+
+        const calculateNextReview = (rating, currentData) => {
+            let interval = currentData?.interval || 0; 
+            let ease = currentData?.ease || STARTING_EASE;
+            let state = currentData?.state || 'new'; 
+            let step = currentData?.step || 0; 
+
+            let newInterval = interval;
+            let newEase = ease;
+            let newState = state;
+            let newStep = step;
+            let dueMinutes = 0;
+
+            const STEPS = (state === 'relearning') ? [10] : LEARNING_STEPS;
+
+            if (state === 'new' || state === 'learning' || state === 'relearning') {
+                if (rating === 1) { // Errei (Again)
+                    newStep = 0;
+                    dueMinutes = STEPS[0];
+                    newState = state === 'new' ? 'learning' : state; 
+                } 
+                else if (rating === 2) { // Difícil (Hard)
+                    dueMinutes = Math.floor((STEPS[step] || STEPS[0]) * 1.5);
+                    if (dueMinutes < 1) dueMinutes = 1;
+                    newState = state === 'new' ? 'learning' : state;
+                } 
+                else if (rating === 3) { // Bom (Good)
+                    if (step < STEPS.length - 1) {
+                        newStep = step + 1;
+                        dueMinutes = STEPS[newStep];
+                        newState = state === 'new' ? 'learning' : state;
+                    } else {
+                        if (state === 'relearning') {
+                            newInterval = Math.max(1, interval); 
+                        } else {
+                            newInterval = GRADUATING_INTERVAL; 
+                        }
+                        newState = 'review';
+                        newStep = 0;
+                    }
+                } 
+                else if (rating === 4) { // Fácil (Easy)
+                    if (state === 'relearning') {
+                        newInterval = Math.max(1, interval + 1);
+                    } else {
+                        newInterval = EASY_INTERVAL; 
+                    }
+                    newState = 'review';
+                    newStep = 0;
+                }
+            } 
+            else if (state === 'review') {
+                if (rating === 1) { // Errei (Lapse/Again)
+                    newEase = Math.max(1.3, ease - 0.20);
+                    newInterval = Math.max(1, Math.floor(interval * 0.2)); 
+                    newState = 'relearning';
+                    newStep = 0;
+                    dueMinutes = STEPS[0]; 
+                } 
+                else if (rating === 2) { // Difícil (Hard)
+                    newEase = Math.max(1.3, ease - 0.15);
+                    newInterval = Math.max(interval + 1, Math.floor(interval * 1.2));
+                    newState = 'review';
+                } 
+                else if (rating === 3) { // Bom (Good)
+                    newInterval = Math.max(interval + 1, Math.floor(interval * ease));
+                    newState = 'review';
+                } 
+                else if (rating === 4) { // Fácil (Easy)
+                    newEase = ease + 0.15;
+                    newInterval = Math.max(interval + 1, Math.floor(interval * ease * 1.3));
+                    newState = 'review';
+                }
+            }
+
+            const now = new Date();
+            let dueDate = new Date();
+            let requeue = false;
+
+            if (newState === 'learning' || newState === 'relearning') {
+                dueDate = new Date(now.getTime() + dueMinutes * 60000);
+                requeue = true; 
+            } else {
+                dueDate.setDate(dueDate.getDate() + newInterval);
+                dueDate.setHours(0, 0, 0, 0);
+                requeue = false; 
+            }
+
+            return { 
+                interval: newInterval, 
+                ease: newEase, 
+                state: newState, 
+                step: newStep, 
+                dueDate: dueDate, 
+                requeue: requeue,
+                dueMinutes: (newState === 'learning' || newState === 'relearning') ? dueMinutes : 0
+            };
+        };
+
+        const formatTimeLabel = (result) => {
+            if (result.state === 'review') {
+                if (result.interval === 1) return '1d';
+                if (result.interval > 30) return `${Math.round(result.interval/30)}m`;
+                return `${result.interval}d`;
+            }
+            if (result.dueMinutes < 60) return `${Math.round(result.dueMinutes)}m`;
+            if (result.dueMinutes < 1440) return `${Math.round(result.dueMinutes/60)}h`;
+            return `${Math.round(result.dueMinutes/1440)}d`;
+        };
+
+        const formatDuration = (ms) => {
+            if (!ms) return "0m";
+            const seconds = Math.floor((ms / 1000) % 60);
+            const minutes = Math.floor((ms / (1000 * 60)) % 60);
+            const hours = Math.floor((ms / (1000 * 60 * 60)));
+            if (hours > 0) return `${hours}h ${minutes}m`;
+            return `${minutes}m ${seconds}s`;
+        };
+
+        const speakText = (htmlText) => {
+            if (!window.speechSynthesis) return;
+            window.speechSynthesis.cancel();
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = htmlText;
+            const text = tempDiv.textContent || tempDiv.innerText || "";
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = "pt-BR";
+            utterance.rate = 1.1; 
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        };
+
+        // --- COMPONENTS ---
+        const Heatmap = ({ reviews }) => {
+            const days = Array.from({length: 30}, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - (29 - i));
+                return d.toISOString().split('T')[0];
+            });
+            const activityMap = {};
+            Object.values(reviews).forEach(r => {
+                if(r.lastReviewed) {
+                   const dateKey = r.lastReviewed.toDate ? r.lastReviewed.toDate().toISOString().split('T')[0] : new Date(r.lastReviewed).toISOString().split('T')[0];
+                   activityMap[dateKey] = (activityMap[dateKey] || 0) + 1;
+                }
+            });
+            return (
+                <div className="glass p-4 rounded-xl mb-6 shadow-xl border border-slate-700/50">
+                    <div className="flex items-center gap-2 mb-3 text-slate-400 text-xs uppercase font-bold tracking-wider">
+                        <Calendar size={14} /> Frequência de Revisão (Últimos 30 dias)
+                    </div>
+                    <div className="flex justify-between gap-1">
+                        {days.map(day => {
+                            const count = activityMap[day] || 0;
+                            let colorClass = "bg-slate-800";
+                            if (count > 0) colorClass = "bg-blue-900";
+                            if (count > 10) colorClass = "bg-blue-700";
+                            if (count > 30) colorClass = "bg-blue-500";
+                            if (count > 60) colorClass = "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]";
+                            return (<div key={day} title={`${day}: ${count} revisões`} className={`w-full h-8 rounded-sm transition-all duration-500 ${colorClass} hover:scale-125 cursor-pointer`}></div>);
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        const RichTextEditor = ({ value, onChange }) => {
+            const editorRef = React.useRef(null);
+            
+            React.useEffect(() => {
+                if (editorRef.current && editorRef.current.innerHTML !== value) {
+                    editorRef.current.innerHTML = value || '';
+                }
+            }, [value]);
+
+            const execCmd = (cmd) => { document.execCommand(cmd, false, null); };
+            const execBlock = (tag) => { document.execCommand('formatBlock', false, tag); };
+
+            return (
+                <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden flex flex-col h-40 focus-within:border-blue-500 transition-colors">
+                    <div className="bg-slate-800 p-2 flex gap-1 border-b border-slate-700 flex-wrap">
+                        <button type="button" onClick={() => execCmd('bold')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Negrito"><Bold size={16}/></button>
+                        <button type="button" onClick={() => execCmd('italic')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Itálico"><Italic size={16}/></button>
+                        <button type="button" onClick={() => execCmd('insertUnorderedList')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Lista"><List size={16}/></button>
+                        <button type="button" onClick={() => execBlock('pre')} className="p-1.5 hover:bg-slate-700 rounded text-purple-400" title="Inserir Código (Bloco)"><Code size={16}/></button>
+                    </div>
+                    <div 
+                        ref={editorRef}
+                        className="flex-1 p-4 text-white focus:outline-none overflow-y-auto prose text-sm" 
+                        contentEditable 
+                        onInput={(e) => onChange(e.currentTarget.innerHTML)}
+                    ></div>
+                </div>
+            );
+        };
+
+        // --- ATUALIZADO: Custom Study Modal suportando Tags Dinâmicas ---
+        const CustomStudyModal = ({ isOpen, onClose, onStart, categories, tags }) => {
+            const [mode, setMode] = React.useState('due');
+            const [limit, setLimit] = React.useState(20);
+            const [selectedCategory, setSelectedCategory] = React.useState('All');
+            const [selectedTag, setSelectedTag] = React.useState('All'); // Novo estado de Tag
+            
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-md shadow-2xl relative">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={20}/></button>
+                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Settings size={20} className="text-blue-500"/> Estudo Personalizado</h2>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-slate-400 text-xs uppercase font-bold mb-2">Deck (Matéria)</label>
+                                    <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500 text-sm">
+                                        <option value="All">Todas</option>
+                                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-slate-400 text-xs uppercase font-bold mb-2 flex items-center gap-1"><Tag size={12}/> Filtrar por Tag</label>
+                                    <select value={selectedTag} onChange={e => setSelectedTag(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500 text-sm">
+                                        <option value="All">Qualquer Tag</option>
+                                        {tags.map(t => <option key={t} value={t}>#{t}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-slate-400 text-xs uppercase font-bold mb-2">Modo de Estudo</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button onClick={() => setMode('due')} className={`p-3 rounded-lg text-sm border ${mode === 'due' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Revisão (Vencidos)</button>
+                                    <button onClick={() => setMode('cram')} className={`p-3 rounded-lg text-sm border ${mode === 'cram' ? 'bg-purple-600 border-purple-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Cram (Intensivo)</button>
+                                    <button onClick={() => setMode('new')} className={`p-3 rounded-lg text-sm border ${mode === 'new' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Apenas Novos</button>
+                                    <button onClick={() => setMode('all')} className={`p-3 rounded-lg text-sm border ${mode === 'all' ? 'bg-amber-600 border-amber-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Todos os Cards</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-slate-400 text-xs uppercase font-bold mb-2">Limite de Cards</label>
+                                <input type="number" value={limit} onChange={e => setLimit(Number(e.target.value))} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500" min="1" max="500" />
+                            </div>
+                            <button onClick={() => onStart({ category: selectedCategory, mode, limit, tag: selectedTag })} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold p-3 rounded-xl mt-4 hover:shadow-lg shadow-blue-900/20 transition-all transform active:scale-95">Iniciar Sessão</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- STUDY SESSION ---
+        const StudySession = ({ initialQueue, user, reviews, setReviews, userStats, setUserStats, onFinish }) => {
+            const [queue, setQueue] = React.useState(initialQueue);
+            const [index, setIndex] = React.useState(0);
+            const [isFlipped, setIsFlipped] = React.useState(false);
+            const [finished, setFinished] = React.useState(false);
+            const [cardStartTime, setCardStartTime] = React.useState(Date.now());
+            const [requeueNotice, setRequeueNotice] = React.useState(null);
+            
+            const [feedbackPulse, setFeedbackPulse] = React.useState({ active: false, color: 'transparent' });
+
+            const progress = queue.length > 0 ? ((index) / queue.length) * 100 : 100;
+
+            const handleUndo = () => {
+                if (finished) { setFinished(false); setIndex(queue.length - 1); setIsFlipped(true); } 
+                else if (index > 0) { setIndex(index - 1); setIsFlipped(true); }
+                setCardStartTime(Date.now());
+            };
+
+            React.useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); handleUndo(); return; }
+                    if (finished) return;
+                    if (e.code === 'Space') { if (!isFlipped) setIsFlipped(true); e.preventDefault(); } 
+                    else if (isFlipped) {
+                          if (e.key === '1') handleRate(1);
+                          if (e.key === '2') handleRate(2);
+                          if (e.key === '3') handleRate(3);
+                          if (e.key === '4') handleRate(4);
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [isFlipped, finished, index, queue]);
+
+            if (finished || queue.length === 0) {
+                return (
+                    <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-fade-in relative">
+                        <div className="absolute top-0 left-0 w-full p-4 flex justify-start"><button onClick={handleUndo} className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 border border-slate-700 text-sm"><Undo2 size={16} /> Desfazer Último</button></div>
+                        <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 mb-6 border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]"><Check size={48} /></div>
+                        <h2 className="text-3xl font-bold text-white mb-2">Buffer Limpo</h2>
+                        <p className="text-slate-400 mb-8">Sessão completa. Bom trabalho na manutenção da sua retenção.</p>
+                        <button onClick={onFinish} className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg border border-slate-700">Voltar ao Dashboard</button>
+                    </div>
+                );
+            }
+
+            const card = queue[index];
+            const currentData = card.tempReviewData || reviews[card.id] || { interval: 0, ease: 2.5, state: 'new', step: 0 };
+            
+            const options = { 
+                1: calculateNextReview(1, currentData), 
+                2: calculateNextReview(2, currentData), 
+                3: calculateNextReview(3, currentData), 
+                4: calculateNextReview(4, currentData) 
+            };
+
+            const handleRate = async (rating) => {
+                let timeSpent = Date.now() - cardStartTime;
+                if (timeSpent > 60000) timeSpent = 60000; 
+
+                const colorMap = {
+                    1: 'rgba(239, 68, 68, 0.4)',  // Vermelho
+                    2: 'rgba(249, 115, 22, 0.4)', // Laranja
+                    3: 'rgba(59, 130, 246, 0.4)', // Azul
+                    4: 'rgba(16, 185, 129, 0.4)'  // Verde
+                };
+                
+                setFeedbackPulse({ active: true, color: colorMap[rating] });
+                setTimeout(() => setFeedbackPulse(prev => ({ ...prev, active: false })), 50);
+
+                setCardStartTime(Date.now());
+                const result = options[rating];
+
+                if (result.requeue) {
+                    if (result.dueMinutes < 5) {
+                        const requeuedCard = { ...card, tempReviewData: result };
+                        setQueue(prev => [...prev, requeuedCard]);
+                        setRequeueNotice(`Retorno rápido em ${formatTimeLabel(result)}`);
+                    } else {
+                        setRequeueNotice(`Em aprendizado. Libera em: ${formatTimeLabel(result)}`);
+                    }
+                    setTimeout(() => setRequeueNotice(null), 2500);
+                }
+
+                if (user && userStats) {
+                    const newReviews = { ...reviews, [card.id]: { ...result, dueDate: { toDate: () => result.dueDate }, lastReviewed: { toDate: () => new Date() } } };
+                    setReviews(newReviews);
+                    
+                    try {
+                        await setDoc(doc(db, `users/${user.uid}/reviews/${card.id}`), { ...result, lastReviewed: serverTimestamp() });
+                    } catch(e) { console.error("Erro ao salvar card:", e); }
+
+                    const isCorrect = rating > 1;
+                    const todayStr = new Date().toISOString().split('T')[0];
+
+                    const updatedStats = { ...userStats };
+                    updatedStats.timeStudied = (updatedStats.timeStudied || 0) + timeSpent;
+                    updatedStats.cardsSeen = (updatedStats.cardsSeen || 0) + 1;
+                    
+                    if (isCorrect) {
+                        updatedStats.correctAnswers = (updatedStats.correctAnswers || 0) + 1;
+                        updatedStats.currentStreak = (updatedStats.currentStreak || 0) + 1;
+                    } else {
+                        updatedStats.currentStreak = 0;
+                    }
+                    
+                    updatedStats.retention = (updatedStats.correctAnswers / updatedStats.cardsSeen) * 100;
+                    updatedStats.dailyActivity = updatedStats.dailyActivity || {};
+                    updatedStats.dailyActivity[todayStr] = (updatedStats.dailyActivity[todayStr] || 0) + 1;
+
+                    setUserStats(updatedStats);
+
+                    try {
+                        const statsRef = doc(db, 'leaderboard', user.uid);
+                        await setDoc(statsRef, { 
+                            email: user.email,
+                            ...updatedStats, 
+                            lastActive: serverTimestamp() 
+                        }, { merge: true });
+                    } catch(e) { console.error("Erro ao salvar stats:", e); }
+                }
+
+                setIsFlipped(false);
+                if (index < queue.length - 1) {
+                    setIndex(index + 1);
+                } else {
+                    setFinished(true);
+                }
+            };
+
+            const getStateBadge = () => {
+                const s = currentData.state;
+                if(s === 'new') return <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-blue-500/30">Novo</span>
+                if(s === 'learning') return <span className="bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-orange-500/30">Aprendendo</span>
+                if(s === 'review') return <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-emerald-500/30">Revisão</span>
+                if(s === 'relearning') return <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-red-500/30">Reaprender</span>
+                return null;
+            }
+
+            return (
+                <div className="max-w-3xl mx-auto mt-4 h-[80vh] flex flex-col perspective-1000 relative">
+                    
+                    {/* OVERLAY Dopaminérgico */}
+                    <div 
+                        className={`fixed inset-0 pointer-events-none z-[100] ${feedbackPulse.active ? 'transition-none' : 'transition-opacity duration-500 ease-out'}`}
+                        style={{
+                            boxShadow: `inset 0 0 120px ${feedbackPulse.color}, inset 0 0 20px ${feedbackPulse.color}`,
+                            opacity: feedbackPulse.active ? 1 : 0
+                        }}
+                    ></div>
+
+                    {requeueNotice && (
+                        <div className="absolute top-10 left-1/2 transform -translate-x-1/2 z-50 bg-slate-800 text-blue-400 px-4 py-2 rounded-full border border-blue-500/30 shadow-lg text-sm font-bold animate-fade-in flex items-center gap-2">
+                            <Repeat size={14} /> {requeueNotice}
+                        </div>
+                    )}
+
+                    <div className="w-full h-1 bg-slate-800 rounded-full mb-4 overflow-hidden"><div className="h-full bg-blue-500 transition-all duration-500 ease-out shadow-[0_0_10px_#3b82f6]" style={{ width: `${progress}%` }}></div></div>
+                    
+                    {/* Header de Status */}
+                    <div className="flex justify-between items-center text-xs text-slate-500 uppercase tracking-widest mb-4 px-2">
+                        <div className="flex items-center gap-4">
+                            <button onClick={handleUndo} disabled={index === 0} title="Desfazer (Ctrl+Z)" className={`flex items-center gap-1 transition-colors ${index === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`}><Undo2 size={16} /> <span className="hidden sm:inline">Desfazer</span></button>
+                            <div className="flex flex-col items-start">
+                                <div className="flex items-center gap-2">
+                                    <span className="bg-slate-900 px-2 py-1 rounded text-blue-400 border border-slate-800">{card.category}</span>
+                                    <span className="text-slate-600">/</span>
+                                    <span className="text-slate-300 truncate max-w-[150px]">{card.lesson || 'Geral'}</span>
+                                </div>
+                                {/* Tags Exibidas na Sessão de Estudo */}
+                                {card.tags && card.tags.length > 0 && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                        {card.tags.map(t => (
+                                            <span key={t} className="bg-purple-900/30 text-purple-400 px-1.5 py-0.5 rounded text-[9px] border border-purple-500/30 flex items-center gap-0.5"><Tag size={8}/> {t}</span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {getStateBadge()}
+                            <div className="flex items-center gap-2 font-mono"><Layers size={14} className="text-slate-600"/><span>{queue.length - index} restantes</span></div>
+                        </div>
+                    </div>
+                    
+                    {userStats && userStats.currentStreak > 2 && (
+                        <div className="absolute -top-12 right-0 flex items-center gap-1 text-orange-500 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20 font-bold text-sm animate-pulse-slow">
+                            <Flame size={16} /> Streak: {userStats.currentStreak}
+                        </div>
+                    )}
+
+                    <div className="relative flex-1 group z-10">
+                        <div className={`w-full h-full duration-500 transform-style-3d transition-transform relative ${isFlipped ? 'rotate-y-180' : ''}`}>
+                            <div className="absolute inset-0 backface-hidden glass border border-slate-700 rounded-3xl p-6 md:p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden bg-slate-900/90">
+                                <div className="absolute top-4 right-4 text-slate-600 hover:text-blue-400 cursor-pointer transition-colors z-20" title="Ouvir Pergunta" onClick={(e) => { e.stopPropagation(); speakText(card.front); }}><Volume2 size={24} /></div>
+                                <div className="flex-1 w-full flex items-center justify-center overflow-hidden relative"><div className="w-full max-h-full overflow-y-auto custom-scrollbar px-4 flex flex-col items-center justify-center"><div className="prose prose-invert prose-lg md:prose-2xl font-medium text-white select-text w-full max-w-none leading-relaxed break-words" dangerouslySetInnerHTML={{__html: card.front || ''}}></div></div></div>
+                                <button onClick={() => setIsFlipped(true)} className="mt-6 bg-slate-800 hover:bg-slate-700 text-blue-400 px-8 py-3 rounded-full font-bold transition-all flex items-center gap-2 border border-slate-700 hover:border-blue-500/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)] group shrink-0 z-10"><Eye size={18} className="group-hover:scale-110 transition-transform" /> <span className="text-sm">Revelar</span></button>
+                            </div>
+                            <div className="absolute inset-0 backface-hidden rotate-y-180 glass border-2 border-blue-500/30 rounded-3xl p-6 md:p-8 flex flex-col items-center shadow-2xl overflow-hidden bg-slate-900/95">
+                                 <div className="absolute top-4 right-4 text-slate-600 hover:text-blue-400 cursor-pointer transition-colors z-20" title="Ouvir Resposta" onClick={(e) => { e.stopPropagation(); speakText(card.back); }}><Volume2 size={24} /></div>
+                                <div className="w-full border-b border-slate-800/80 pb-4 mb-4 text-center shrink-0"><span className="text-[10px] uppercase text-slate-600 font-bold tracking-widest block mb-1">Contexto (Pergunta)</span><div className="text-sm text-slate-400 opacity-70 line-clamp-2 px-4" dangerouslySetInnerHTML={{__html: card.front}}></div></div>
+                                <div className="flex-1 w-full overflow-hidden relative"><div className="w-full max-h-full overflow-y-auto custom-scrollbar px-4"><div className="prose prose-invert prose-lg text-slate-200 w-full max-w-none text-center select-text leading-relaxed break-words" dangerouslySetInnerHTML={{__html: card.back || ''}}></div></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className={`grid grid-cols-4 gap-4 mt-6 transition-all duration-300 z-10 ${isFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                        <button onClick={() => handleRate(1)} className="p-4 rounded-2xl bg-slate-900 border border-red-900/30 text-red-400 hover:bg-red-900/20 hover:border-red-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
+                            <span className="absolute top-2 right-2 text-[9px] bg-red-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 1</span>
+                            <span className="font-bold text-sm mb-1 group-hover:text-red-300">Errei</span>
+                            <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[1])}</span>
+                        </button>
+                        
+                        <button onClick={() => handleRate(2)} className="p-4 rounded-2xl bg-slate-900 border border-orange-900/30 text-orange-400 hover:bg-orange-900/20 hover:border-orange-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
+                            <span className="absolute top-2 right-2 text-[9px] bg-orange-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 2</span>
+                            <span className="font-bold text-sm mb-1 group-hover:text-orange-300">Difícil</span>
+                            <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[2])}</span>
+                        </button>
+                        
+                        <button onClick={() => handleRate(3)} className="p-4 rounded-2xl bg-slate-900 border border-blue-900/30 text-blue-400 hover:bg-blue-900/20 hover:border-blue-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
+                            <span className="absolute top-2 right-2 text-[9px] bg-blue-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 3</span>
+                            <span className="font-bold text-sm mb-1 group-hover:text-blue-300">Bom</span>
+                            <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[3])}</span>
+                        </button>
+                        
+                        <button onClick={() => handleRate(4)} className="p-4 rounded-2xl bg-slate-900 border border-emerald-900/30 text-emerald-400 hover:bg-emerald-900/20 hover:border-emerald-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
+                            <span className="absolute top-2 right-2 text-[9px] bg-emerald-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 4</span>
+                            <span className="font-bold text-sm mb-1 group-hover:text-emerald-300">Fácil</span>
+                            <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[4])}</span>
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- HIERARCHICAL TABLE COMPONENTS ---
+        const formatCount = (count, colorClass) => {
+            if (count === 0) return <span className="text-slate-600 opacity-50">0</span>;
+            return <span className={`font-bold ${colorClass}`}>{count}</span>;
+        };
+
+        const DeckRow = ({ name, stats, level, isExpanded, onToggle, onStudy, hasChildren, icon }) => {
+            const paddingLeft = level === 0 ? 'pl-4 md:pl-6' : level === 1 ? 'pl-10 md:pl-14' : 'pl-16 md:pl-24';
+            return (
+               <div className={`grid grid-cols-12 gap-2 items-center py-3 border-b border-slate-800/50 hover:bg-slate-800/50 transition-colors group cursor-pointer ${paddingLeft}`} onClick={(e) => { e.stopPropagation(); onStudy(); }}>
+                   <div className="col-span-6 md:col-span-6 flex items-center gap-2">
+                       {hasChildren ? (
+                           <button onClick={(e) => { e.stopPropagation(); onToggle(); }} className="p-1 hover:bg-slate-700 rounded text-slate-500 hover:text-white transition-colors">
+                               <ChevronRight size={16} className={`transition-transform duration-200 ${isExpanded ? 'rotate-90 text-blue-400' : ''}`} />
+                           </button>
+                       ) : <div className="w-6 shrink-0"></div>}
+                       {icon && <span className="text-slate-500 shrink-0">{icon}</span>}
+                       <span className={`font-medium truncate ${level === 0 ? 'text-white text-base md:text-lg' : level === 1 ? 'text-slate-200 text-sm md:text-base' : 'text-slate-400 text-sm'}`} title={name}>{name}</span>
+                   </div>
+                   <div className="col-span-2 md:col-span-2 text-center font-mono text-sm">{formatCount(stats.n, 'text-blue-400')}</div>
+                   <div className="col-span-2 md:col-span-2 text-center font-mono text-sm">{formatCount(stats.l, 'text-orange-400')}</div>
+                   <div className="col-span-2 md:col-span-2 text-center font-mono text-sm">{formatCount(stats.r, 'text-emerald-400')}</div>
+               </div>
+            );
+        };
+
+        const SubcategoryNode = ({ name, stats, onStudy }) => (
+            <DeckRow name={name} stats={stats} level={2} onStudy={onStudy} hasChildren={false} icon={<Layers size={14}/>} />
+        );
+
+        const LessonNode = ({ name, data, category, startStudy }) => {
+            const [expanded, setExpanded] = React.useState(false);
+            return (
+                <>
+                    <DeckRow name={name} stats={data.stats} level={1} isExpanded={expanded} onToggle={() => setExpanded(!expanded)} onStudy={() => startStudy(category, name)} hasChildren={true} icon={<BookOpen size={16}/>} />
+                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                        {Object.keys(data.subcategories).sort().map(sub => (
+                            <SubcategoryNode key={sub} name={sub} stats={data.subcategories[sub].stats} onStudy={() => startStudy(category, name, sub)} />
+                        ))}
+                    </div>
+                </>
+            );
+        };
+
+        const CategoryNode = ({ name, data, startStudy }) => {
+            const [expanded, setExpanded] = React.useState(true);
+            return (
+                <div className="bg-slate-900/30">
+                    <DeckRow name={name} stats={data.stats} level={0} isExpanded={expanded} onToggle={() => setExpanded(!expanded)} onStudy={() => startStudy(name)} hasChildren={true} icon={<Folder size={18} className="text-amber-500"/>} />
+                    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${expanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                        <div className="bg-slate-950/40">
+                            {Object.keys(data.lessons).sort().map(lesson => (
+                                <LessonNode key={lesson} name={lesson} data={data.lessons[lesson]} category={name} startStudy={startStudy} />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const DeckTable = ({ structure, startStudy }) => {
+            if (Object.keys(structure).length === 0) {
+                return <div className="text-center p-12 border border-dashed border-slate-800 rounded-xl text-slate-600"><p>Nenhum dado no buffer. Acesse o painel Admin.</p></div>;
+            }
+
+            return (
+                <div className="glass rounded-xl overflow-hidden border border-slate-700/50 shadow-2xl animate-slide-up">
+                    <div className="grid grid-cols-12 gap-2 p-3 md:p-4 border-b border-slate-700 bg-slate-900/90 text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-10">
+                        <div className="col-span-6 md:col-span-6 pl-4 md:pl-6">Baralho (Matéria / Aula / Tópico)</div>
+                        <div className="col-span-2 md:col-span-2 text-center text-blue-400" title="Cards Novos">Novo</div>
+                        <div className="col-span-2 md:col-span-2 text-center text-orange-400" title="Cards em Aprendizado que vencem hoje">Aprender</div>
+                        <div className="col-span-2 md:col-span-2 text-center text-emerald-400" title="Cards para Revisão que vencem hoje">Revisar</div>
+                    </div>
+                    <div className="divide-y divide-slate-800/80">
+                        {Object.keys(structure).sort().map(cat => (
+                            <CategoryNode key={cat} name={cat} data={structure[cat]} startStudy={startStudy} />
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        const App = () => {
+            const [user, setUser] = React.useState(null);
+            const [isAdmin, setIsAdmin] = React.useState(false);
+            const [view, setView] = React.useState("loading"); 
+            const [cards, setCards] = React.useState([]);
+            const [reviews, setReviews] = React.useState({});
+            const [userStats, setUserStats] = React.useState(null);
+            const [studyQueue, setStudyQueue] = React.useState([]);
+            const [customStudyOpen, setCustomStudyOpen] = React.useState(false);
+            
+            // Effect 1: Auth & Global Cards (Real-time listener)
+            React.useEffect(() => {
+                const unsubAuth = onAuthStateChanged(auth, (currentUser) => {
+                    setUser(currentUser);
+                    if (currentUser) {
+                        setIsAdmin(currentUser.email?.endsWith("@userpro.com") || false);
+                    } else {
+                        setIsAdmin(false);
+                        setReviews({});
+                        setUserStats(null);
+                    }
+                    setView(currentUser ? "decks" : "auth");
+                });
+
+                const qCards = query(collection(db, "cards"));
+                const unsubCards = onSnapshot(qCards, (snapshot) => {
+                    const loadedCards = snapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return { 
+                            id: doc.id, 
+                            ...data,
+                            category: normalize(data.category || 'Sem Categoria'),
+                            lesson: normalize(data.lesson || 'Conteúdo Geral'),
+                            subcategory: normalize(data.subcategory || 'Geral'),
+                            tags: Array.isArray(data.tags) ? data.tags : [] // Suporte a Tags Seguras
+                        };
+                    });
+                    setCards(loadedCards);
+                }, (error) => console.error("Erro cards onSnapshot:", error));
+
+                return () => {
+                    unsubAuth();
+                    unsubCards();
+                };
+            }, []);
+
+            // Effect 2: User specific data (Real-time listeners)
+            React.useEffect(() => {
+                if (!user) return;
+
+                const qReviews = query(collection(db, `users/${user.uid}/reviews`));
+                const unsubReviews = onSnapshot(qReviews, (snapshot) => {
+                    const userReviews = {};
+                    snapshot.forEach(doc => { userReviews[doc.id] = doc.data(); });
+                    setReviews(userReviews);
+                }, (error) => console.error("Erro reviews onSnapshot:", error));
+                
+                const statsRef = doc(db, 'leaderboard', user.uid);
+                const unsubStats = onSnapshot(statsRef, async (docSnap) => {
+                    if (!docSnap.exists()) {
+                        const defaultStats = { 
+                            email: user.email, 
+                            cardsSeen: 0, 
+                            correctAnswers: 0, 
+                            retention: 0, 
+                            timeStudied: 0, 
+                            currentStreak: 0,
+                            dailyActivity: {}
+                        };
+                        await setDoc(statsRef, { ...defaultStats, lastActive: serverTimestamp() });
+                    } else {
+                        setUserStats(docSnap.data());
+                    }
+                }, (error) => console.error("Erro stats onSnapshot:", error));
+
+                return () => {
+                    unsubReviews();
+                    unsubStats();
+                };
+            }, [user]);
+
+            const getDecksStructure = () => {
+                const structure = {};
+                const now = new Date();
+                const endOfToday = new Date();
+                endOfToday.setHours(23, 59, 59, 999);
+
+                cards.forEach(card => {
+                    const cat = normalize(card.category || "Sem Categoria");
+                    const lesson = normalize(card.lesson || "Conteúdo Geral");
+                    const sub = normalize(card.subcategory || "Geral");
+
+                    if (!structure[cat]) structure[cat] = { stats: { n:0, l:0, r:0 }, lessons: {} };
+                    if (!structure[cat].lessons[lesson]) structure[cat].lessons[lesson] = { stats: { n:0, l:0, r:0 }, subcategories: {} };
+                    if (!structure[cat].lessons[lesson].subcategories[sub]) structure[cat].lessons[lesson].subcategories[sub] = { stats: { n:0, l:0, r:0 }, cards: [] };
+
+                    let isNew = false, isLearn = false, isReview = false;
+                    const rev = reviews[card.id];
+
+                    if (!rev) {
+                        isNew = true; 
+                    } else {
+                        let dueDate = rev.dueDate;
+                        if (dueDate && typeof dueDate.toDate === 'function') dueDate = dueDate.toDate();
+                        else dueDate = new Date(dueDate || now);
+
+                        if (dueDate <= endOfToday) {
+                            if (rev.state === 'learning' || rev.state === 'relearning') isLearn = true;
+                            else if (rev.state === 'review') isReview = true;
+                            else if (rev.state === 'new') isNew = true;
+                        }
+                    }
+
+                    if (isNew) {
+                        structure[cat].stats.n++;
+                        structure[cat].lessons[lesson].stats.n++;
+                        structure[cat].lessons[lesson].subcategories[sub].stats.n++;
+                    } else if (isLearn) {
+                        structure[cat].stats.l++;
+                        structure[cat].lessons[lesson].stats.l++;
+                        structure[cat].lessons[lesson].subcategories[sub].stats.l++;
+                    } else if (isReview) {
+                        structure[cat].stats.r++;
+                        structure[cat].lessons[lesson].stats.r++;
+                        structure[cat].lessons[lesson].subcategories[sub].stats.r++;
+                    }
+
+                    structure[cat].lessons[lesson].subcategories[sub].cards.push(card);
+                });
+                return structure;
+            };
+
+            const startCustomStudy = (settings) => {
+                let queue = cards;
+                const now = new Date();
+                
+                if (settings.category !== 'All') {
+                    queue = queue.filter(c => normalize(c.category) === normalize(settings.category));
+                }
+                
+                // NOVA LÓGICA DE FILTRAGEM POR TAG
+                if (settings.tag !== 'All') {
+                    queue = queue.filter(c => (c.tags || []).includes(settings.tag));
+                }
+
+                if (settings.mode === 'new') {
+                    queue = queue.filter(c => !reviews[c.id]);
+                } else if (settings.mode === 'due') {
+                    queue = queue.filter(c => {
+                        const r = reviews[c.id];
+                        if (!r) return true;
+                        let dueDate;
+                        if (r.dueDate && typeof r.dueDate.toDate === 'function') dueDate = r.dueDate.toDate();
+                        else dueDate = new Date(r.dueDate || now);
+                        return dueDate <= now;
+                    });
+                } else if (settings.mode === 'cram') {
+                    queue = queue.sort(() => Math.random() - 0.5);
+                }
+                if (settings.mode !== 'cram') queue = queue.sort(() => Math.random() - 0.5);
+                
+                queue = queue.slice(0, settings.limit);
+                if (queue.length === 0) { alert("Nenhum card encontrado com esses filtros."); return; }
+                
+                setStudyQueue(queue);
+                setCustomStudyOpen(false);
+                setView("study");
+            };
+
+            const startStudy = (category, lesson = null, subcategory = null) => {
+                const now = new Date();
+                let queue = cards.filter(c => {
+                    if (category && normalize(c.category) !== normalize(category)) return false;
+                    if (lesson && normalize(c.lesson || 'Conteúdo Geral') !== normalize(lesson)) return false;
+                    if (subcategory && normalize(c.subcategory) !== normalize(subcategory)) return false;
+                    return true;
+                });
+
+                if (user) {
+                    queue = queue.filter(card => {
+                        const review = reviews[card.id];
+                        if (!review) return true; 
+                        
+                        let dueDate;
+                        if (review.dueDate && typeof review.dueDate.toDate === 'function') dueDate = review.dueDate.toDate();
+                        else dueDate = new Date(review.dueDate || now);
+                        
+                        return dueDate <= now; 
+                    });
+                } else {
+                    queue = queue.sort(() => Math.random() - 0.5);
+                }
+                
+                if (queue.length === 0) {
+                    if (confirm("Você já concluiu todos os cards vencidos até este momento exato.\n\nOs cards em aprendizado que retornam daqui a pouco estarão aguardando o tempo acabar. \n\nDeseja forçar uma revisão extra de fixação agora (Modo Cram)?")) {
+                        startCustomStudy({ category: category || 'All', mode: 'cram', limit: 20, tag: 'All' });
+                    }
+                    return;
+                }
+                setStudyQueue(queue.sort(() => Math.random() - 0.5));
+                setView("study");
+            };
+
+            if (view === "loading") {
+                return (
+                    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-blue-500">
+                        <div className="relative">
+                            <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                            <Cpu size={24} className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" />
+                        </div>
+                        <span className="font-mono text-sm tracking-[0.2em] mt-6 text-blue-400">INICIALIZANDO O L1 CACHE v1.1 (TAGS)...</span>
+                    </div>
+                );
+            }
+
+            if (view === "auth") return <AuthScreen onLogin={() => setView("decks")} guestMode={() => setView("decks")} />;
+
+            const structure = getDecksStructure();
+            
+            let totalDue = 0;
+            if(user) {
+                Object.values(structure).forEach(cat => {
+                   totalDue += (cat.stats.n + cat.stats.l + cat.stats.r);
+                });
+            }
+
+            // Extrai todas as tags únicas do banco em tempo real
+            const allTags = [...new Set(cards.flatMap(c => c.tags || []))].sort();
+
+            return (
+                <div className="min-h-screen flex flex-col bg-slate-950 text-slate-200 font-sans selection:bg-purple-500/30">
+                    <nav className="border-b border-slate-800 bg-slate-950/80 sticky top-0 z-50 backdrop-blur-md">
+                        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+                            <div className="flex items-center gap-3 font-bold text-xl cursor-pointer group" onClick={() => setView("decks")}>
+                                <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-2 rounded-lg shadow-lg shadow-blue-900/20 group-hover:scale-105 transition-transform">
+                                    <Cpu size={20} className="text-white" />
+                                </div>
+                                <span className="text-white tracking-tight">L1 <span className="text-blue-500">Cache</span> <span className="text-[10px] bg-slate-800 px-1 py-0.5 rounded text-blue-400 align-top">RT</span></span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                {user && <button onClick={() => setView("leaderboard")} className="text-yellow-500 flex items-center gap-1.5 text-sm hover:text-yellow-400 font-medium bg-yellow-500/10 px-3 py-1.5 rounded-full border border-yellow-500/20 transition-all hover:bg-yellow-500/20"><Trophy size={14} /> Ranking Global</button>}
+                                {isAdmin && <button onClick={() => setView("admin")} className="text-amber-500 hover:text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20 transition-all flex items-center gap-1.5 text-sm"><Lock size={14} /> Admin</button>}
+                                {user ? <button onClick={() => signOut(auth)} className="text-slate-400 hover:text-red-400 transition-colors" title="Sair"><LogOut size={20}/></button> : null}
+                            </div>
+                        </div>
+                    </nav>
+
+                    <main className="flex-1 max-w-6xl mx-auto w-full p-4 relative">
+                        {view === "decks" && (
+                            <div className="animate-fade-in space-y-6">
+                                <header className="border-b border-slate-800 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div>
+                                        <h2 className="text-3xl font-bold text-white mb-2">Painel de Controle</h2>
+                                        <div className="flex gap-6 text-sm text-slate-400 font-mono">
+                                            <div className="flex items-center gap-2"><div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div> {cards.length} Cards (Live)</div>
+                                            <div className="flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div> {Object.keys(reviews).length} Memorizados</div>
+                                            {user && totalDue === 0 && <div className="flex items-center gap-2 text-emerald-400"><Check size={14}/> Tudo em dia!</div>}
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setCustomStudyOpen(true)} className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-5 py-3 rounded-xl font-bold transition-all flex items-center gap-2 hover:border-blue-500"><Settings size={18} className="text-blue-400"/> Estudo Personalizado</button>
+                                </header>
+                                <Heatmap reviews={reviews} />
+                                <DeckTable structure={structure} startStudy={startStudy} />
+                                <CustomStudyModal 
+                                    isOpen={customStudyOpen} 
+                                    onClose={() => setCustomStudyOpen(false)} 
+                                    onStart={startCustomStudy} 
+                                    categories={[...new Set(cards.map(c => normalize(c.category)))]} 
+                                    tags={allTags} // Passa tags únicas pro Modal
+                                />
+                            </div>
+                        )}
+                        {view === "study" && <StudySession initialQueue={studyQueue} user={user} reviews={reviews} setReviews={setReviews} userStats={userStats} setUserStats={setUserStats} onFinish={() => setView("decks")} />}
+                        {view === "leaderboard" && <LeaderboardView />}
+                        {view === "admin" && isAdmin && <AdminPanel cards={cards} allTags={allTags} onExit={() => setView("decks")} />}
+                    </main>
+                </div>
+            );
+        };
+
+        const AuthScreen = ({ onLogin, guestMode }) => {
+            const [isRegister, setIsRegister] = React.useState(false);
+            const [email, setEmail] = React.useState("");
+            const [password, setPassword] = React.useState("");
+            const [loading, setLoading] = React.useState(false);
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                try {
+                    if (isRegister) await createUserWithEmailAndPassword(auth, email, password);
+                    else await signInWithEmailAndPassword(auth, email, password);
+                    onLogin();
+                } catch (err) { alert("Erro: " + err.message); } finally { setLoading(false); }
+            };
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 relative overflow-hidden">
+                    <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+                    <div className="w-full max-w-md glass p-8 rounded-2xl shadow-2xl relative z-10 animate-slide-up">
+                        <div className="text-center mb-8">
+                            <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-blue-500/30"><Cpu size={32} /></div>
+                            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">L1 Cache <span className="text-blue-400">v1.1</span></h1>
+                            <p className="text-slate-400 text-sm">Engine SM-2 Real-time para máxima retenção em Ciência da Computação.</p>
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="space-y-3">
+                                <input type="email" placeholder="Email Acadêmico" className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 p-3 rounded-xl text-white outline-none transition-all placeholder:text-slate-600" value={email} onChange={e => setEmail(e.target.value)} />
+                                <input type="password" placeholder="Senha" className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 p-3 rounded-xl text-white outline-none transition-all placeholder:text-slate-600" value={password} onChange={e => setPassword(e.target.value)} />
+                            </div>
+                            <button disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold p-3.5 rounded-xl shadow-lg shadow-blue-900/20 transition-all transform hover:scale-[1.02] disabled:opacity-50">{loading ? "Carregando Algoritmo..." : (isRegister ? "Registrar Matrícula" : "Login no Sistema")}</button>
+                        </form>
+                        <div className="mt-6 flex justify-between text-sm text-slate-500 pt-4 border-t border-slate-700/50">
+                            <button onClick={() => setIsRegister(!isRegister)} className="hover:text-blue-400 transition-colors">{isRegister ? "Já tenho conta" : "Criar nova conta"}</button>
+                            <button onClick={guestMode} className="hover:text-white transition-colors">Acesso Visitante</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LeaderboardView = () => {
+            const [leaders, setLeaders] = React.useState([]);
+            const [loading, setLoading] = React.useState(true);
+            
+            const calculateLast31Days = (dailyActivity) => {
+                if (!dailyActivity) return 0;
+                let total = 0;
+                const today = new Date();
+                for (let i = 0; i < 31; i++) {
+                    const targetDate = new Date(today);
+                    targetDate.setDate(targetDate.getDate() - i);
+                    const dateStr = targetDate.toISOString().split('T')[0];
+                    if (dailyActivity[dateStr]) {
+                        total += dailyActivity[dateStr];
+                    }
+                }
+                return total;
+            };
+
+            React.useEffect(() => {
+                const q = query(collection(db, 'leaderboard'));
+                const unsub = onSnapshot(q, (snap) => {
+                    const fetchedLeaders = snap.docs.map(d => {
+                        const data = d.data();
+                        return {
+                            ...data,
+                            cardsSeen: data.cardsSeen || data.total || 0,
+                            retention: data.retention || 0,
+                            timeStudied: data.timeStudied || 0,
+                            currentStreak: data.currentStreak || 0,
+                            dailyActivity: data.dailyActivity || {}
+                        };
+                    });
+                    
+                    setLeaders(fetchedLeaders.sort((a,b) => (b.cardsSeen - a.cardsSeen) || (b.retention - a.retention)).slice(0, 50));
+                    setLoading(false);
+                }, (error) => {
+                    console.error("Erro Leaderboard onSnapshot:", error);
+                    setLoading(false);
+                });
+
+                return () => unsub(); 
+            }, []);
+
+            return (
+                <div className="max-w-5xl mx-auto animate-fade-in">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 p-6 glass rounded-2xl border border-slate-700/50">
+                        <div className="flex items-center gap-4">
+                            <div className="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative">
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
+                                <Trophy className="text-yellow-500" size={32}/>
+                            </div>
+                            <div>
+                                <h2 className="text-3xl font-bold text-white tracking-tight">Leaderboard Global <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full uppercase ml-2 align-middle shadow-[0_0_10px_rgba(239,68,68,0.5)]">Ao Vivo</span></h2>
+                                <p className="text-slate-400 text-sm mt-1">Ranking atualizado em tempo real baseado em constância, volume e precisão.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="glass rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50 overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[800px]">
+                            <thead className="bg-slate-900/90 text-slate-400 uppercase text-[10px] md:text-xs font-bold tracking-wider">
+                                <tr>
+                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center w-16">Rank</th>
+                                    <th className="p-4 md:p-5 border-b border-slate-800">Estudante</th>
+                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1"><Layers size={14}/> Cards (XP)</div></th>
+                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1"><Clock size={14}/> Tempo</div></th>
+                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1 text-orange-500"><Flame size={14}/> Streak</div></th>
+                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1"><TrendingUp size={14}/> Últ. 31 Dias</div></th>
+                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1"><Target size={14}/> Retenção</div></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800/50 transition-all">
+                                {loading ? (
+                                    <tr><td colSpan="7" className="p-8 text-center text-slate-500">Sincronizando dados ao vivo...</td></tr>
+                                ) : leaders.map((l, i) => (
+                                    <tr key={l.email || i} className={`transition-colors hover:bg-slate-800/40 ${i === 0 ? 'bg-yellow-500/5' : i === 1 ? 'bg-slate-400/5' : i === 2 ? 'bg-amber-700/5' : ''}`}>
+                                        <td className="p-4 md:p-5 text-center font-bold text-slate-500 font-mono text-lg">
+                                            {i === 0 ? <span className="text-yellow-500">1</span> : i === 1 ? <span className="text-slate-300">2</span> : i === 2 ? <span className="text-amber-600">3</span> : i+1}
+                                        </td>
+                                        <td className="p-4 md:p-5 text-white font-medium flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-400">
+                                                {l.email ? l.email.charAt(0).toUpperCase() : '?'}
+                                            </div>
+                                            {l.email ? l.email.split('@')[0] : 'Anônimo'}
+                                        </td>
+                                        <td className="p-4 md:p-5 text-center text-blue-400 font-mono font-bold">{l.cardsSeen.toLocaleString('pt-BR')}</td>
+                                        <td className="p-4 md:p-5 text-center text-slate-300 font-mono text-sm">{formatDuration(l.timeStudied || 0)}</td>
+                                        <td className="p-4 md:p-5 text-center">
+                                            <span className={`inline-flex items-center gap-1 font-mono font-bold ${l.currentStreak >= 3 ? 'text-orange-500' : 'text-slate-500'}`}>
+                                                {l.currentStreak > 0 && <Flame size={12} className={l.currentStreak >= 3 ? 'animate-pulse' : ''}/>} 
+                                                {l.currentStreak}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 md:p-5 text-center text-slate-300 font-mono text-sm">{calculateLast31Days(l.dailyActivity).toLocaleString('pt-BR')}</td>
+                                        <td className="p-4 md:p-5 text-center">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold border inline-block min-w-[60px] ${l.retention > 80 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' : l.retention > 50 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                                {l.retention ? l.retention.toFixed(1) : 0}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- PAINEL ADMIN ATUALIZADO (TAGS DYNAMICS) ---
+        const AdminPanel = ({ cards, allTags, onExit }) => {
+            const [form, setForm] = React.useState({ front: '', back: '', category: 'Geral', lesson: 'Conteúdo Geral', subcategory: '', tags: [] });
+            const [tagInput, setTagInput] = React.useState('');
+            const [editingId, setEditingId] = React.useState(null);
+            
+            const [filterCategory, setFilterCategory] = React.useState('Todos');
+            const [filterLesson, setFilterLesson] = React.useState('Todos');
+            const [filterSubcategory, setFilterSubcategory] = React.useState('Todos');
+            const [filterTag, setFilterTag] = React.useState('Todas'); // Filtro de Tag no Admin
+            const [searchTerm, setSearchTerm] = React.useState('');
+            
+            const existingCategories = [...new Set(cards.map(c => normalize(c.category)))].filter(Boolean).sort();
+            const existingLessons = [...new Set(cards.map(c => normalize(c.lesson)))].filter(Boolean).sort();
+            const existingSubcategories = [...new Set(cards.map(c => normalize(c.subcategory)))].filter(Boolean).sort();
+            
+            const filteredCards = cards.filter(c => {
+                const cCat = normalize(c.category);
+                const cLess = normalize(c.lesson || 'Conteúdo Geral');
+                const cSub = normalize(c.subcategory);
+                const cTags = c.tags || [];
+
+                const matchCategory = filterCategory === 'Todos' || cCat === filterCategory;
+                const matchLesson = filterLesson === 'Todos' || cLess === filterLesson;
+                const matchSubcategory = filterSubcategory === 'Todos' || cSub === filterSubcategory;
+                const matchTag = filterTag === 'Todas' || cTags.includes(filterTag);
+                const matchSearch = searchTerm === '' || (c.front || '').toLowerCase().includes(searchTerm.toLowerCase());
+                
+                return matchCategory && matchLesson && matchSubcategory && matchTag && matchSearch;
+            });
+
+            // Adiciona tag via Enter ou Vírgula
+            const handleAddTag = (e) => {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    const newTag = tagInput.trim().toLowerCase();
+                    if (newTag && !form.tags.includes(newTag)) {
+                        setForm(prev => ({ ...prev, tags: [...prev.tags, newTag] }));
+                    }
+                    setTagInput('');
+                }
+            };
+
+            const removeTag = (tagToRemove) => {
+                setForm(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tagToRemove) }));
+            };
+
+            const handleSave = async (e) => {
+                e.preventDefault();
+                if(!form.front || !form.back) {
+                      alert("Por favor, preencha a Pergunta (Frente) e a Resposta (Verso) antes de salvar.");
+                      return;
+                }
+                try {
+                    const dataToSave = {
+                        front: form.front,
+                        back: form.back,
+                        category: normalize(form.category || 'Geral'),
+                        lesson: normalize(form.lesson || 'Conteúdo Geral'),
+                        subcategory: normalize(form.subcategory || 'Geral'),
+                        tags: form.tags // Salva o array de tags
+                    };
+
+                    if (editingId) {
+                        await updateDoc(doc(db, "cards", editingId), dataToSave);
+                        setEditingId(null);
+                    } else {
+                        await addDoc(collection(db, "cards"), { ...dataToSave, createdAt: serverTimestamp() });
+                    }
+                    setForm(prev => ({ ...prev, front: '', back: '', tags: [] })); 
+                } catch (e) { alert("Erro ao salvar: " + e.message); }
+            };
+
+            const handleEdit = (card) => { 
+                setForm({
+                    front: card.front,
+                    back: card.back,
+                    category: normalize(card.category),
+                    lesson: normalize(card.lesson || 'Conteúdo Geral'),
+                    subcategory: normalize(card.subcategory),
+                    tags: card.tags || [] // Carrega as tags seguras
+                }); 
+                setEditingId(card.id); 
+            };
+            
+            const handleDelete = async (id) => { 
+                if(confirm("Deletar este node da base de conhecimento?")) { 
+                    await deleteDoc(doc(db, "cards", id)); 
+                } 
+            };
+
+            return (
+                <div className="glass p-6 rounded-2xl border border-slate-700 min-h-screen md:h-[calc(100vh-100px)] flex flex-col shadow-2xl animate-fade-in">
+                    <div className="flex justify-between mb-4 border-b border-slate-700 pb-4 flex-shrink-0">
+                        <h2 className="text-xl font-bold text-amber-500 flex items-center gap-2"><Lock size={18}/> {editingId ? 'Editando Node' : 'Console Admin (Real-time)'}</h2>
+                        <button onClick={onExit} className="hover:text-white text-slate-400 transition-colors bg-slate-800 p-2 rounded-lg"><X size={20} /></button>
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-6 flex-1 overflow-hidden">
+                        
+                        {/* SIDEBAR DE LISTAGEM */}
+                        <div className="w-full md:w-1/3 flex flex-col border-b md:border-b-0 md:border-r border-slate-700/50 pb-4 md:pr-4 h-64 md:h-auto">
+                            <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mb-3 flex-shrink-0 space-y-3">
+                                <div className="flex items-center gap-2"><Filter size={16} className="text-slate-500" /><span className="text-xs text-slate-400 font-bold uppercase">Filtros de Busca</span></div>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 outline-none focus:border-blue-500 transition-colors">
+                                        <option value="Todos">Todas Matérias</option>
+                                        {existingCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                    </select>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <select value={filterLesson} onChange={(e) => setFilterLesson(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 outline-none focus:border-blue-500 transition-colors">
+                                            <option value="Todos">Todas Aulas</option>
+                                            {existingLessons.map(l => <option key={l} value={l}>{l}</option>)}
+                                        </select>
+                                        <select value={filterTag} onChange={(e) => setFilterTag(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 outline-none focus:border-purple-500 transition-colors">
+                                            <option value="Todas">Qualquer Tag</option>
+                                            {allTags.map(t => <option key={t} value={t}>#{t}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="relative">
+                                        <input type="text" placeholder="Buscar na frente..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 pl-8 outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"/>
+                                        <Search size={14} className="absolute left-2.5 top-2.5 text-slate-500 pointer-events-none"/>
+                                    </div>
+                                </div>
+                                <div className="text-xs text-slate-500 text-right font-mono">{filteredCards.length} nodes listados (Ao vivo)</div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                {filteredCards.map(c => (
+                                    <div key={c.id} onClick={() => handleEdit(c)} className={`p-3 rounded-lg text-sm border cursor-pointer transition-all group ${editingId === c.id ? 'bg-blue-900/20 border-blue-500/50' : 'bg-slate-900/40 border-slate-800 hover:border-slate-600'}`}>
+                                        <div className="flex justify-between items-start">
+                                            <div className="w-full">
+                                                <div className="flex flex-col mb-1">
+                                                    <span className="text-blue-400 text-[10px] font-mono uppercase tracking-wider opacity-70 truncate">{c.category}</span>
+                                                    <span className="text-slate-500 text-[10px] font-bold">{c.lesson} &gt; {c.subcategory}</span>
+                                                </div>
+                                                <div className="text-slate-300 font-medium line-clamp-2 text-xs opacity-80" dangerouslySetInnerHTML={{__html: (c.front || '').replace(/<[^>]*>?/gm, '')}}></div>
+                                                
+                                                {/* Exibição rápida das tags no card listado */}
+                                                {c.tags && c.tags.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-2">
+                                                        {c.tags.map(t => <span key={t} className="bg-purple-900/30 text-purple-400 px-1.5 py-0.5 rounded text-[9px] border border-purple-500/30">#{t}</span>)}
+                                                    </div>
+                                                )}
+
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-end gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }} className="text-red-400 hover:bg-red-900/30 p-1.5 rounded-lg transition-colors" title="Excluir"><Trash2 size={14}/></button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* FORMULÁRIO DE EDIÇÃO */}
+                        <div className="flex-1 overflow-y-auto pl-0 md:pl-2 custom-scrollbar pb-20 md:pb-0">
+                             <form onSubmit={handleSave} className="space-y-4 bg-slate-900/20 p-2 rounded-xl">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Matéria (Deck)</label>
+                                        <input className="w-full bg-slate-800 p-3 rounded-lg text-white border border-slate-700 focus:border-blue-500 outline-none transition-all font-mono text-sm" placeholder="Ex: Sistemas Operacionais" value={form.category} onChange={e => setForm(prev => ({...prev, category: e.target.value}))} list="category-suggestions" />
+                                        <datalist id="category-suggestions">{existingCategories.map((cat, i) => <option key={i} value={cat} />)}</datalist>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Aula (Lesson)</label>
+                                        <input className="w-full bg-slate-800 p-3 rounded-lg text-white border border-slate-700 focus:border-blue-500 outline-none transition-all font-mono text-sm" placeholder="Ex: Aula 01 - Introdução" value={form.lesson} onChange={e => setForm(prev => ({...prev, lesson: e.target.value}))} list="lesson-suggestions" />
+                                        <datalist id="lesson-suggestions">{existingLessons.map((l, i) => <option key={l} value={l} />)}</datalist>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Tópico</label>
+                                        <input className="w-full bg-slate-800 p-3 rounded-lg text-white border border-slate-700 focus:border-blue-500 outline-none transition-all font-mono text-sm" placeholder="Ex: Conceitos Básicos" value={form.subcategory} onChange={e => setForm(prev => ({...prev, subcategory: e.target.value}))} list="subcategory-suggestions" />
+                                        <datalist id="subcategory-suggestions">{existingSubcategories.map((sub, i) => <option key={sub} value={sub} />)}</datalist>
+                                    </div>
+                                </div>
+                                
+                                {/* INPUT DINÂMICO DE TAGS */}
+                                <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
+                                    <label className="text-xs font-bold text-purple-400 uppercase ml-1 mb-2 flex items-center gap-1"><Tag size={14}/> Indexação / Tags (Pressione Enter)</label>
+                                    
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                        {form.tags.map(t => (
+                                            <span key={t} className="bg-purple-900/60 text-purple-300 px-3 py-1 rounded-md text-sm flex items-center gap-2 border border-purple-500/40">
+                                                #{t} <button type="button" onClick={() => removeTag(t)} className="hover:text-red-400 transition-colors"><X size={14}/></button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        className="w-full bg-slate-900 p-3 rounded-lg text-white border border-slate-700 focus:border-purple-500 outline-none transition-all font-mono text-sm placeholder:text-slate-600" 
+                                        placeholder="Digite uma tag e pressione Enter (ex: algoritmos)" 
+                                        value={tagInput} 
+                                        onChange={e => setTagInput(e.target.value)} 
+                                        onKeyDown={handleAddTag}
+                                        list="tag-suggestions"
+                                    />
+                                    <datalist id="tag-suggestions">{allTags.map((t, i) => <option key={i} value={t} />)}</datalist>
+                                </div>
+
+                                <div><label className="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Input: Pergunta (Frente)</label><RichTextEditor value={form.front} onChange={(val) => setForm(prev => ({...prev, front: val}))} /></div>
+                                <div><label className="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Output: Resposta (Verso)</label><RichTextEditor value={form.back} onChange={(val) => setForm(prev => ({...prev, back: val}))} /></div>
+                                
+                                <div className="flex gap-3 pt-4 sticky bottom-0 bg-slate-900/90 p-4 border-t border-slate-700 -mx-2 -mb-2 rounded-b-xl backdrop-blur z-20">
+                                    {editingId && (<button type="button" onClick={() => { setEditingId(null); setForm(prev => ({ ...prev, front: '', back: '', tags: [] })); }} className="w-1/3 bg-slate-700 hover:bg-slate-600 text-white font-bold p-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm md:text-base"><RotateCcw size={16}/> Cancelar</button>)}
+                                    <button type="submit" className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold p-3 rounded-lg shadow-lg shadow-blue-900/20 transition-all flex justify-center gap-2 items-center transform hover:scale-[1.01] text-sm md:text-base">{editingId ? <><Save size={18} /> Salvar Alterações</> : <><Plus size={18} /> Inserir no Banco de Dados</>}</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ErrorBoundary><App /></ErrorBoundary>);
+    </script>
 </body>
 </html>

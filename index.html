@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L1 Cache v2.0</title>
+    <title>L1 Cache v2.1 (Anki Engine)</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -30,7 +30,6 @@
                         'flip': 'flip 0.6s forwards',
                         'fade-in': 'fadeIn 0.5s ease-in-out',
                         'slide-up': 'slideUp 0.4s ease-out',
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                     },
                     keyframes: {
                         fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
@@ -76,7 +75,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, getDoc, doc, setDoc, deleteDoc, updateDoc, serverTimestamp, query, where, increment, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat } from "https://esm.sh/lucide-react@0.344.0?bundle";
+        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, Clock } from "https://esm.sh/lucide-react@0.344.0?bundle";
 
         const firebaseConfig = {
             apiKey: "AIzaSyClIIJkYOmAvEKPtXvG-SIi9SzxQpaBN9s",
@@ -93,63 +92,86 @@
 
         const normalize = (val) => String(val || '').trim();
 
-        // --- ERROR BOUNDARY ---
-        class ErrorBoundary extends React.Component {
-            constructor(props) { super(props); this.state = { hasError: false, error: null }; }
-            static getDerivedStateFromError(error) { return { hasError: true, error }; }
-            componentDidCatch(error, errorInfo) { console.error("React Error:", error, errorInfo); }
-            render() {
-                if (this.state.hasError) {
-                    return (
-                        <div className="min-h-screen flex items-center justify-center bg-slate-950 text-red-400 p-8 text-center">
-                            <div><h1 className="text-2xl font-bold mb-2">System Failure</h1><p className="mb-4">Kernel Panic. Reinicie o sistema.</p><button onClick={() => window.location.reload()} className="bg-red-600 text-white px-6 py-2 rounded font-bold hover:bg-red-500">Reboot</button></div>
-                        </div>
-                    );
+        // --- ENGINE ANKI (SM-2 PRECISO) ---
+        // Fases: 'learning' | 'review' | 'relearning'
+        // Steps Learning: 0 (1min), 1 (10min)
+        
+        const calculateAnkiNextReview = (rating, currentData) => {
+            // Default Values (Anki Standard)
+            let interval = currentData?.interval || 0; // em minutos se < 1440, dias se >= 1440
+            let ease = currentData?.ease || 2.5; // Multiplicador (250%)
+            let phase = currentData?.phase || 'learning'; 
+            let step = currentData?.step || 0; // 0 = 1min step, 1 = 10min step
+
+            let newInterval = 0;
+            let newEase = ease;
+            let newPhase = phase;
+            let newStep = step;
+
+            // --- LÓGICA DE APRENDIZADO (Novos ou Reaprendendo) ---
+            if (phase === 'learning' || phase === 'relearning') {
+                if (rating === 1) { // Errei (Again)
+                    newStep = 0;
+                    newInterval = 1; // 1 minuto
+                    newPhase = 'learning'; 
+                } else if (rating === 2) { // Difícil (Hard)
+                    // No Anki, Hard em learning não avança o passo, apenas repete com média ou intervalo fixo um pouco maior
+                    newInterval = 6; // 6 minutos
+                    // Mantém o step e a fase
+                } else if (rating === 3) { // Bom (Good)
+                    if (step === 0) {
+                        newStep = 1;
+                        newInterval = 10; // 10 minutos
+                    } else {
+                        // Terminou os passos de learning -> Gradua
+                        newPhase = 'review';
+                        newInterval = 1440; // 1 dia (Graduating interval)
+                        newStep = 0;
+                    }
+                } else if (rating === 4) { // Fácil (Easy)
+                    newPhase = 'review';
+                    newInterval = 4 * 1440; // 4 dias (Easy interval)
+                    newStep = 0;
                 }
-                return this.props.children;
+            } 
+            // --- LÓGICA DE REVISÃO (Graduados) ---
+            else {
+                if (rating === 1) { // Errei (Again) -> LAPSE
+                    newPhase = 'relearning';
+                    newStep = 0;
+                    newInterval = 10; // Passo de reaprendizado
+                    newEase = Math.max(1.3, ease - 0.2); // Penalidade no Ease (-20%)
+                } else if (rating === 2) { // Difícil (Hard)
+                    newInterval = Math.floor(interval * 1.2); // Intervalo cresce devagar (1.2x)
+                    newEase = Math.max(1.3, ease - 0.15); // Ease cai um pouco (-15%)
+                } else if (rating === 3) { // Bom (Good)
+                    newInterval = Math.floor(interval * ease); // Intervalo normal (x Ease)
+                    // Ease mantém
+                } else if (rating === 4) { // Fácil (Easy)
+                    newInterval = Math.floor(interval * ease * 1.3); // Bônus (x Ease x 1.3)
+                    newEase = ease + 0.15; // Bônus no Ease (+15%)
+                }
             }
-        }
 
-        // --- ENGINE ANKI (SM-2 ADAPTADO) ---
-        const calculateNextReview = (rating, currentData) => {
-            const interval = currentData?.interval || 0;
-            const ease = currentData?.ease || 2.5;
-            const state = currentData?.state || 'learning';
-            let newInterval = 0, newEase = ease, newState = state;
-
-            // Lógica de Intervalos (em minutos)
-            if (state === 'learning') {
-                if (rating === 1) { newInterval = 5; newState = 'learning'; } // Errei: volta em 5 min
-                else if (rating === 2) { newInterval = 10; newState = 'learning'; } // Difícil: volta em 10 min
-                else if (rating === 3) { newInterval = 20; if (interval >= 15) { newInterval = 1440; newState = 'graduated'; } } // Bom: 20 min ou 1 dia
-                else if (rating === 4) { newInterval = 1440; newState = 'graduated'; } // Fácil: 1 dia
-            } else {
-                // Graduated logic
-                if (rating === 1) { newInterval = 10; newEase = Math.max(1.3, ease - 0.2); newState = 'learning'; } // Lapse
-                else if (rating === 2) { newInterval = Math.floor(interval * 1.2); newEase = Math.max(1.3, ease - 0.15); newState = 'graduated'; }
-                else if (rating === 3) { newInterval = Math.floor(interval * ease); newState = 'graduated'; }
-                else if (rating === 4) { newInterval = Math.floor(interval * ease * 1.3); newEase = ease + 0.15; newState = 'graduated'; }
-            }
-            
+            // Conversão para Data
             const now = new Date();
             const dueDate = new Date(now.getTime() + newInterval * 60000);
-            return { interval: newInterval, ease: newEase, state: newState, dueDate: dueDate };
+
+            return { 
+                interval: newInterval, 
+                ease: newEase, 
+                phase: newPhase, 
+                step: newStep, 
+                dueDate: dueDate 
+            };
         };
 
         const formatTimeLabel = (minutes) => {
             if (!minutes && minutes !== 0) return '-';
-            if (minutes < 60) return `${minutes}m`;
+            if (minutes < 1) return '<1m';
+            if (minutes < 60) return `${Math.round(minutes)}m`;
             if (minutes < 1440) return `${Math.round(minutes/60)}h`;
             return `${Math.round(minutes/1440)}d`;
-        };
-
-        const formatDuration = (ms) => {
-            if (!ms) return "0m";
-            const seconds = Math.floor((ms / 1000) % 60);
-            const minutes = Math.floor((ms / (1000 * 60)) % 60);
-            const hours = Math.floor((ms / (1000 * 60 * 60)));
-            if (hours > 0) return `${hours}h ${minutes}m`;
-            return `${minutes}m ${seconds}s`;
         };
 
         const speakText = (htmlText) => {
@@ -165,7 +187,8 @@
             window.speechSynthesis.speak(utterance);
         };
 
-        // --- COMPONENTS ---
+        // --- COMPONENTES ---
+
         const Heatmap = ({ reviews }) => {
             const days = Array.from({length: 30}, (_, i) => {
                 const d = new Date();
@@ -182,7 +205,7 @@
             return (
                 <div className="glass p-4 rounded-xl mb-6">
                     <div className="flex items-center gap-2 mb-3 text-slate-400 text-xs uppercase font-bold tracking-wider">
-                        <Calendar size={14} /> Consistency Streak (Últimos 30 dias)
+                        <Calendar size={14} /> Frequência de Estudos (30 dias)
                     </div>
                     <div className="flex justify-between gap-1">
                         {days.map(day => {
@@ -199,212 +222,163 @@
             );
         };
 
-        const RichTextEditor = ({ value, onChange }) => {
-            const editorRef = React.useRef(null);
-            
-            React.useEffect(() => {
-                if (editorRef.current && editorRef.current.innerHTML !== value) {
-                    editorRef.current.innerHTML = value || '';
-                }
-            }, [value]);
-
-            const execCmd = (cmd) => { document.execCommand(cmd, false, null); };
-            const execBlock = (tag) => { document.execCommand('formatBlock', false, tag); };
-
-            return (
-                <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden flex flex-col h-40 focus-within:border-blue-500 transition-colors">
-                    <div className="bg-slate-800 p-2 flex gap-1 border-b border-slate-700 flex-wrap">
-                        <button type="button" onClick={() => execCmd('bold')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Negrito"><Bold size={16}/></button>
-                        <button type="button" onClick={() => execCmd('italic')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Itálico"><Italic size={16}/></button>
-                        <button type="button" onClick={() => execCmd('insertUnorderedList')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Lista"><List size={16}/></button>
-                        <button type="button" onClick={() => execBlock('pre')} className="p-1.5 hover:bg-slate-700 rounded text-purple-400" title="Inserir Código (Bloco)"><Code size={16}/></button>
-                    </div>
-                    <div 
-                        ref={editorRef}
-                        className="flex-1 p-4 text-white focus:outline-none overflow-y-auto prose text-sm" 
-                        contentEditable 
-                        onInput={(e) => onChange(e.currentTarget.innerHTML)}
-                    ></div>
-                </div>
-            );
-        };
-
-        const CustomStudyModal = ({ isOpen, onClose, onStart, categories }) => {
-            const [mode, setMode] = React.useState('due');
-            const [limit, setLimit] = React.useState(20);
-            const [selectedCategory, setSelectedCategory] = React.useState('All');
-            if (!isOpen) return null;
-            return (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-                    <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-md shadow-2xl relative">
-                        <button onClick={onClose} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={20}/></button>
-                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Settings size={20} className="text-blue-500"/> Estudo Personalizado</h2>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-slate-400 text-xs uppercase font-bold mb-2">Deck (Matéria)</label>
-                                <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500">
-                                    <option value="All">Todas as Matérias</option>
-                                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-slate-400 text-xs uppercase font-bold mb-2">Modo de Estudo</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button onClick={() => setMode('due')} className={`p-3 rounded-lg text-sm border ${mode === 'due' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Revisão (Vencidos)</button>
-                                    <button onClick={() => setMode('cram')} className={`p-3 rounded-lg text-sm border ${mode === 'cram' ? 'bg-purple-600 border-purple-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Cram (Intensivo)</button>
-                                    <button onClick={() => setMode('new')} className={`p-3 rounded-lg text-sm border ${mode === 'new' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Apenas Novos</button>
-                                    <button onClick={() => setMode('all')} className={`p-3 rounded-lg text-sm border ${mode === 'all' ? 'bg-amber-600 border-amber-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}>Todos os Cards</button>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-slate-400 text-xs uppercase font-bold mb-2">Limite de Cards</label>
-                                <input type="number" value={limit} onChange={e => setLimit(Number(e.target.value))} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500" min="1" max="500" />
-                            </div>
-                            <button onClick={() => onStart({ category: selectedCategory, mode, limit })} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold p-3 rounded-xl mt-4 hover:shadow-lg shadow-blue-900/20 transition-all transform active:scale-95">Iniciar Sessão</button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- STUDY SESSION (CORE MODIFICATION FOR ANKI BEHAVIOR) ---
         const StudySession = ({ initialQueue, user, reviews, setReviews, onFinish }) => {
-            // Local state for queue to allow appending items dynamically
-            const [queue, setQueue] = React.useState(initialQueue);
-            const [index, setIndex] = React.useState(0);
+            // Fila dinâmica. No Anki, a fila é reordenada baseada no tempo.
+            // Aqui, ao invés de 'index', removemos sempre o item 0 e reinserimos se necessário.
+            const [queue, setQueue] = React.useState(initialQueue.map(c => ({
+                ...c,
+                // Garante que o card tenha uma data de "agora" se não tiver, para ordenação inicial
+                tempDueDate: c.tempReviewData?.dueDate || new Date()
+            })));
+            
             const [isFlipped, setIsFlipped] = React.useState(false);
-            const [finished, setFinished] = React.useState(false);
-            const [cardStartTime, setCardStartTime] = React.useState(Date.now());
-            const [requeueNotice, setRequeueNotice] = React.useState(null);
-
-            // Progress based on completed cards vs total cards currently in queue
-            const progress = queue.length > 0 ? ((index) / queue.length) * 100 : 100;
-
-            const handleUndo = () => {
-                if (finished) { setFinished(false); setIndex(queue.length - 1); setIsFlipped(true); } 
-                else if (index > 0) { setIndex(index - 1); setIsFlipped(true); }
-            };
-
-            React.useEffect(() => {
-                const handleKeyDown = (e) => {
-                    if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); handleUndo(); return; }
-                    if (finished) return;
-                    if (e.code === 'Space') { if (!isFlipped) setIsFlipped(true); e.preventDefault(); } 
-                    else if (isFlipped) {
-                          if (e.key === '1') handleRate(1);
-                          if (e.key === '2') handleRate(2);
-                          if (e.key === '3') handleRate(3);
-                          if (e.key === '4') handleRate(4);
-                    }
-                };
-                window.addEventListener('keydown', handleKeyDown);
-                return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [isFlipped, finished, index, queue]); // Added queue dependency
-
-            if (finished || queue.length === 0) {
-                return (
-                    <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-fade-in relative">
-                        <div className="absolute top-0 left-0 w-full p-4 flex justify-start"><button onClick={handleUndo} className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 border border-slate-700 text-sm"><Undo2 size={16} /> Desfazer Último</button></div>
+            const [startTime, setStartTime] = React.useState(Date.now());
+            
+            // Se a fila estiver vazia, acabou
+            if (queue.length === 0) {
+                 return (
+                    <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-fade-in">
                         <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 mb-6 border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]"><Check size={48} /></div>
-                        <h2 className="text-3xl font-bold text-white mb-2">Buffer Limpo</h2>
-                        <p className="text-slate-400 mb-8">Sessão completa. Nenhum card pendente para curto prazo.</p>
-                        <button onClick={onFinish} className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg border border-slate-700">Voltar ao Root</button>
+                        <h2 className="text-3xl font-bold text-white mb-2">Sessão Finalizada</h2>
+                        <p className="text-slate-400 mb-8">Parabéns! Você zerou a fila de revisão por agora.</p>
+                        <button onClick={onFinish} className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg border border-slate-700">Voltar ao Painel</button>
                     </div>
                 );
             }
 
-            const card = queue[index];
-            // Use local override review data if available (for cards re-queued in this session), else use global reviews
-            const currentData = card.tempReviewData || reviews[card.id] || { interval: 0, ease: 2.5, state: 'learning' };
+            // O cartão atual é sempre o primeiro da fila
+            const currentCard = queue[0];
             
+            // Dados atuais do card (Review data global ou temporário da sessão)
+            const currentReviewData = currentCard.tempReviewData || reviews[currentCard.id] || { interval: 0, ease: 2.5, phase: 'learning', step: 0 };
+
+            // Opções futuras (Previsão do Anki)
             const options = { 
-                1: calculateNextReview(1, currentData), 
-                2: calculateNextReview(2, currentData), 
-                3: calculateNextReview(3, currentData), 
-                4: calculateNextReview(4, currentData) 
+                1: calculateAnkiNextReview(1, currentReviewData), 
+                2: calculateAnkiNextReview(2, currentReviewData), 
+                3: calculateAnkiNextReview(3, currentReviewData), 
+                4: calculateAnkiNextReview(4, currentReviewData) 
             };
 
             const handleRate = async (rating) => {
-                const timeSpent = Date.now() - cardStartTime;
-                setCardStartTime(Date.now());
-                const result = calculateNextReview(rating, currentData);
+                const timeSpent = Date.now() - startTime;
+                setStartTime(Date.now());
+                const result = options[rating];
 
-                // --- ANKI LOGIC IMPLEMENTATION ---
-                // Se o intervalo for <= 20 minutos, o card continua na sessão (Fila de Aprendizado)
-                const isShortTerm = result.interval <= 20;
+                // Lógica de Persistência e Fila
+                const isShortTerm = result.interval < 1440; // Menor que 1 dia = Continua na sessão
 
                 if (isShortTerm) {
-                    // Clone the card and attach the NEW scheduling data so next time it appears it has the updated state
-                    const requeuedCard = {
-                        ...card,
-                        tempReviewData: result // Armazena estado temporário para a sessão
+                    // MANTÉM NA SESSÃO
+                    const updatedCard = {
+                        ...currentCard,
+                        tempReviewData: result, // Guarda o estado atualizado (step, phase)
+                        tempDueDate: result.dueDate // Para ordenação
                     };
-                    
-                    // Adiciona ao final da fila
-                    setQueue(prev => [...prev, requeuedCard]);
-                    
-                    // Feedback visual
-                    setRequeueNotice(`Reagendado para daqui a ${formatTimeLabel(result.interval)}`);
-                    setTimeout(() => setRequeueNotice(null), 3000);
-                }
 
-                if (user) {
-                    // Atualiza o estado global e DB
-                    const newReviews = { ...reviews, [card.id]: { ...result, dueDate: { toDate: () => result.dueDate }, lastReviewed: { toDate: () => new Date() } } };
-                    setReviews(newReviews);
-                    try {
-                        await setDoc(doc(db, `users/${user.uid}/reviews/${card.id}`), { ...result, lastReviewed: serverTimestamp() });
-                        
-                        // Stats only update if it's the "real" card review (not a repeat in same session) or we track time anyway
-                        const statsRef = doc(db, 'leaderboard', user.uid);
-                        // Simplificação: Atualiza XP e Tempo sempre
-                        await setDoc(statsRef, { email: user.email, timeStudied: increment(timeSpent), lastActive: serverTimestamp() }, { merge: true });
-                    } catch(e) { console.error("Erro ao salvar progresso:", e); }
+                    // Remove o atual (índice 0) e insere o atualizado
+                    setQueue(prev => {
+                        const remaining = prev.slice(1);
+                        const newQueue = [...remaining, updatedCard];
+                        // REORDENA POR DATA DE VENCIMENTO (Anki Behavior)
+                        // Cards vencidos ou com data menor aparecem primeiro
+                        return newQueue.sort((a, b) => a.tempDueDate - b.tempDueDate);
+                    });
+
+                } else {
+                    // GRADUOU OU É REVISÃO FUTURA -> REMOVE DA SESSÃO
+                    setQueue(prev => prev.slice(1));
+                    
+                    // Salva no Banco de Dados
+                    if (user) {
+                        const newReviews = { ...reviews, [currentCard.id]: { ...result, dueDate: { toDate: () => result.dueDate }, lastReviewed: { toDate: () => new Date() } } };
+                        setReviews(newReviews);
+                        try {
+                            await setDoc(doc(db, `users/${user.uid}/reviews/${currentCard.id}`), { ...result, lastReviewed: serverTimestamp() });
+                            // Stats simples
+                            const statsRef = doc(db, 'leaderboard', user.uid);
+                            await setDoc(statsRef, { email: user.email, timeStudied: increment(timeSpent), lastActive: serverTimestamp() }, { merge: true });
+                        } catch(e) { console.error("Erro ao salvar:", e); }
+                    }
                 }
 
                 setIsFlipped(false);
-                if (index < queue.length - 1) {
-                    setIndex(index + 1);
-                } else {
-                    setFinished(true);
-                }
             };
+
+            // Atalhos de teclado
+            React.useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.code === 'Space') { 
+                        if (!isFlipped) setIsFlipped(true); 
+                        e.preventDefault(); 
+                    } else if (isFlipped) {
+                        if (e.key === '1') handleRate(1);
+                        if (e.key === '2') handleRate(2);
+                        if (e.key === '3') handleRate(3);
+                        if (e.key === '4') handleRate(4);
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [isFlipped, queue]); // Importante depender da queue para pegar o card certo
 
             return (
                 <div className="max-w-3xl mx-auto mt-4 h-[80vh] flex flex-col perspective-1000 relative">
-                    {requeueNotice && (
-                        <div className="absolute top-10 left-1/2 transform -translate-x-1/2 z-50 bg-slate-800 text-blue-400 px-4 py-2 rounded-full border border-blue-500/30 shadow-lg text-sm font-bold animate-fade-in flex items-center gap-2">
-                            <Repeat size={14} /> {requeueNotice}
-                        </div>
-                    )}
-
-                    <div className="w-full h-1 bg-slate-800 rounded-full mb-4 overflow-hidden"><div className="h-full bg-blue-500 transition-all duration-500 ease-out shadow-[0_0_10px_#3b82f6]" style={{ width: `${progress}%` }}></div></div>
+                    {/* Barra de Progresso Invertida (Quantos faltam) */}
                     <div className="flex justify-between items-center text-xs text-slate-500 uppercase tracking-widest mb-4 px-2">
-                        <div className="flex items-center gap-4">
-                            <button onClick={handleUndo} disabled={index === 0} title="Desfazer (Ctrl+Z)" className={`flex items-center gap-1 transition-colors ${index === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`}><Undo2 size={16} /> <span className="hidden sm:inline">Desfazer</span></button>
-                            <div className="flex items-center gap-2"><span className="bg-slate-900 px-2 py-1 rounded text-blue-400 border border-slate-800">{card.category}</span><span className="text-slate-600">/</span><span className="text-slate-300">{card.lesson || 'Geral'}</span></div>
-                        </div>
-                        <div className="flex items-center gap-2"><Layers size={14} className="text-slate-600"/><span>{queue.length - index} restantes</span></div>
+                         <div className="flex items-center gap-2"><span className="bg-slate-900 px-2 py-1 rounded text-blue-400 border border-slate-800">{currentCard.category}</span></div>
+                         <div className="flex items-center gap-2"><Layers size={14} className="text-slate-600"/><span>{queue.length} pendentes</span></div>
                     </div>
+
                     <div className="relative flex-1 group">
                         <div className={`w-full h-full duration-500 transform-style-3d transition-transform relative ${isFlipped ? 'rotate-y-180' : ''}`}>
+                            {/* FRENTE */}
                             <div className="absolute inset-0 backface-hidden glass border border-slate-700 rounded-3xl p-6 md:p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden bg-slate-900/90">
-                                <div className="absolute top-4 right-4 text-slate-600 hover:text-blue-400 cursor-pointer transition-colors z-20" title="Ouvir Pergunta" onClick={(e) => { e.stopPropagation(); speakText(card.front); }}><Volume2 size={24} /></div>
-                                <div className="flex-1 w-full flex items-center justify-center overflow-hidden relative"><div className="w-full max-h-full overflow-y-auto custom-scrollbar px-4 flex flex-col items-center justify-center"><div className="prose prose-invert prose-lg md:prose-2xl font-medium text-white select-text w-full max-w-none leading-relaxed break-words" dangerouslySetInnerHTML={{__html: card.front || ''}}></div></div></div>
-                                <button onClick={() => setIsFlipped(true)} className="mt-6 bg-slate-800 hover:bg-slate-700 text-blue-400 px-8 py-3 rounded-full font-bold transition-all flex items-center gap-2 border border-slate-700 hover:border-blue-500/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)] group shrink-0 z-10"><Eye size={18} className="group-hover:scale-110 transition-transform" /> <span className="text-sm">Revelar</span></button>
+                                <div className="absolute top-4 right-4 text-slate-600 hover:text-blue-400 cursor-pointer transition-colors z-20" onClick={(e) => { e.stopPropagation(); speakText(currentCard.front); }}><Volume2 size={24} /></div>
+                                <div className="flex-1 w-full flex items-center justify-center overflow-hidden relative">
+                                    <div className="prose prose-invert prose-lg md:prose-2xl font-medium text-white select-text w-full leading-relaxed break-words" dangerouslySetInnerHTML={{__html: currentCard.front}}></div>
+                                </div>
+                                <button onClick={() => setIsFlipped(true)} className="mt-6 bg-slate-800 hover:bg-slate-700 text-blue-400 px-8 py-3 rounded-full font-bold transition-all flex items-center gap-2 border border-slate-700 hover:border-blue-500/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)] group shrink-0 z-10">
+                                    <Eye size={18} className="group-hover:scale-110 transition-transform" /> <span className="text-sm">Revelar Resposta (Espaço)</span>
+                                </button>
                             </div>
+
+                            {/* VERSO */}
                             <div className="absolute inset-0 backface-hidden rotate-y-180 glass border-2 border-blue-500/30 rounded-3xl p-6 md:p-8 flex flex-col items-center shadow-2xl overflow-hidden bg-slate-900/95">
-                                 <div className="absolute top-4 right-4 text-slate-600 hover:text-blue-400 cursor-pointer transition-colors z-20" title="Ouvir Resposta" onClick={(e) => { e.stopPropagation(); speakText(card.back); }}><Volume2 size={24} /></div>
-                                <div className="w-full border-b border-slate-800/80 pb-4 mb-4 text-center shrink-0"><span className="text-[10px] uppercase text-slate-600 font-bold tracking-widest block mb-1">Contexto (Pergunta)</span><div className="text-sm text-slate-400 opacity-70 line-clamp-2 px-4" dangerouslySetInnerHTML={{__html: card.front}}></div></div>
-                                <div className="flex-1 w-full overflow-hidden relative"><div className="w-full max-h-full overflow-y-auto custom-scrollbar px-4"><div className="prose prose-invert prose-lg text-slate-200 w-full max-w-none text-center select-text leading-relaxed break-words" dangerouslySetInnerHTML={{__html: card.back || ''}}></div></div></div>
+                                 <div className="absolute top-4 right-4 text-slate-600 hover:text-blue-400 cursor-pointer transition-colors z-20" onClick={(e) => { e.stopPropagation(); speakText(currentCard.back); }}><Volume2 size={24} /></div>
+                                <div className="w-full border-b border-slate-800/80 pb-4 mb-4 text-center shrink-0">
+                                    <span className="text-[10px] uppercase text-slate-600 font-bold tracking-widest block mb-1">Pergunta</span>
+                                    <div className="text-sm text-slate-400 opacity-70 line-clamp-1" dangerouslySetInnerHTML={{__html: currentCard.front}}></div>
+                                </div>
+                                <div className="flex-1 w-full overflow-hidden relative flex flex-col items-center justify-center">
+                                    <div className="prose prose-invert prose-lg text-slate-200 w-full text-center select-text leading-relaxed break-words" dangerouslySetInnerHTML={{__html: currentCard.back}}></div>
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    {/* BOTÕES DE AVALIAÇÃO */}
                     <div className={`grid grid-cols-4 gap-4 mt-6 transition-all duration-300 ${isFlipped ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-                        <button onClick={() => handleRate(1)} className="p-4 rounded-2xl bg-slate-900 border border-red-900/30 text-red-400 hover:bg-red-900/20 hover:border-red-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative"><span className="absolute top-2 right-2 text-[9px] bg-red-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 1</span><span className="font-bold text-sm mb-1 group-hover:text-red-300">Errei</span><span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[1].interval)}</span></button>
-                        <button onClick={() => handleRate(2)} className="p-4 rounded-2xl bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-500 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative"><span className="absolute top-2 right-2 text-[9px] bg-slate-700 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 2</span><span className="font-bold text-sm mb-1 group-hover:text-white">Difícil</span><span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[2].interval)}</span></button>
-                        <button onClick={() => handleRate(3)} className="p-4 rounded-2xl bg-slate-900 border border-blue-900/30 text-blue-400 hover:bg-blue-900/20 hover:border-blue-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative"><span className="absolute top-2 right-2 text-[9px] bg-blue-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 3</span><span className="font-bold text-sm mb-1 group-hover:text-blue-300">Bom</span><span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[3].interval)}</span></button>
-                        <button onClick={() => handleRate(4)} className="p-4 rounded-2xl bg-slate-900 border border-emerald-900/30 text-emerald-400 hover:bg-emerald-900/20 hover:border-emerald-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative"><span className="absolute top-2 right-2 text-[9px] bg-emerald-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 4</span><span className="font-bold text-sm mb-1 group-hover:text-emerald-300">Fácil</span><span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[4].interval)}</span></button>
+                        <button onClick={() => handleRate(1)} className="p-4 rounded-2xl bg-slate-900 border border-red-900/30 text-red-400 hover:bg-red-900/20 hover:border-red-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
+                            <span className="absolute top-2 right-2 text-[9px] bg-red-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 1</span>
+                            <span className="font-bold text-sm mb-1 group-hover:text-red-300">Errei</span>
+                            <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[1].interval)}</span>
+                        </button>
+                        <button onClick={() => handleRate(2)} className="p-4 rounded-2xl bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-500 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
+                            <span className="absolute top-2 right-2 text-[9px] bg-slate-700 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 2</span>
+                            <span className="font-bold text-sm mb-1 group-hover:text-white">Difícil</span>
+                            <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[2].interval)}</span>
+                        </button>
+                        <button onClick={() => handleRate(3)} className="p-4 rounded-2xl bg-slate-900 border border-blue-900/30 text-blue-400 hover:bg-blue-900/20 hover:border-blue-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
+                            <span className="absolute top-2 right-2 text-[9px] bg-blue-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 3</span>
+                            <span className="font-bold text-sm mb-1 group-hover:text-blue-300">Bom</span>
+                            <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[3].interval)}</span>
+                        </button>
+                        <button onClick={() => handleRate(4)} className="p-4 rounded-2xl bg-slate-900 border border-emerald-900/30 text-emerald-400 hover:bg-emerald-900/20 hover:border-emerald-500/50 flex flex-col items-center transition-all hover:scale-105 active:scale-95 group relative">
+                            <span className="absolute top-2 right-2 text-[9px] bg-emerald-900/50 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Tecla 4</span>
+                            <span className="font-bold text-sm mb-1 group-hover:text-emerald-300">Fácil</span>
+                            <span className="text-[10px] opacity-60 font-mono">{formatTimeLabel(options[4].interval)}</span>
+                        </button>
                     </div>
                 </div>
             );
@@ -417,7 +391,6 @@
             const [cards, setCards] = React.useState([]);
             const [reviews, setReviews] = React.useState({});
             const [studyQueue, setStudyQueue] = React.useState([]);
-            const [customStudyOpen, setCustomStudyOpen] = React.useState(false);
             
             React.useEffect(() => {
                 const unsub = onAuthStateChanged(auth, async (currentUser) => {
@@ -461,6 +434,7 @@
                     const userReviews = {};
                     snapshot.forEach(doc => { userReviews[doc.id] = doc.data(); });
                     setReviews(userReviews);
+                    
                     const statsRef = doc(db, 'leaderboard', currentUser.uid);
                     const statsSnap = await getDoc(statsRef);
                     if (!statsSnap.exists()) {
@@ -484,34 +458,6 @@
                 return structure;
             };
 
-            const startCustomStudy = (settings) => {
-                let queue = cards;
-                const now = new Date();
-                if (settings.category !== 'All') {
-                    queue = queue.filter(c => normalize(c.category) === normalize(settings.category));
-                }
-                if (settings.mode === 'new') {
-                    queue = queue.filter(c => !reviews[c.id]);
-                } else if (settings.mode === 'due') {
-                    queue = queue.filter(c => {
-                        const r = reviews[c.id];
-                        if (!r) return true;
-                        let dueDate;
-                        if (r.dueDate && typeof r.dueDate.toDate === 'function') dueDate = r.dueDate.toDate();
-                        else dueDate = new Date(r.dueDate || now);
-                        return dueDate <= now;
-                    });
-                } else if (settings.mode === 'cram') {
-                    queue = queue.sort(() => Math.random() - 0.5);
-                }
-                if (settings.mode !== 'cram') queue = queue.sort(() => Math.random() - 0.5);
-                queue = queue.slice(0, settings.limit);
-                if (queue.length === 0) { alert("Nenhum card encontrado com esses filtros."); return; }
-                setStudyQueue(queue);
-                setCustomStudyOpen(false);
-                setView("study");
-            };
-
             const startStudy = (category, lesson = null, subcategory = null) => {
                 const now = new Date();
                 let queue = cards.filter(c => {
@@ -524,7 +470,7 @@
                 if (user) {
                     queue = queue.filter(card => {
                         const review = reviews[card.id];
-                        if (!review) return true; 
+                        if (!review) return true; // Novo
                         let dueDate;
                         if (review.dueDate && typeof review.dueDate.toDate === 'function') dueDate = review.dueDate.toDate();
                         else dueDate = new Date(review.dueDate || now);
@@ -535,11 +481,28 @@
                 }
                 
                 if (queue.length === 0) {
-                    if (confirm("Você está em dia! Deseja fazer uma revisão extra (Modo Cram)?")) {
-                        startCustomStudy({ category: category || 'All', mode: 'cram', limit: 20 });
-                    }
+                    alert("Você está em dia com esta categoria! Ótimo trabalho.");
                     return;
                 }
+                
+                // ORDENA POR DATA DE VENCIMENTO (Mesmo lógica do Anki)
+                // Cards atrasados primeiro, depois novos (randomizados)
+                queue.sort((a, b) => {
+                    const revA = reviews[a.id];
+                    const revB = reviews[b.id];
+                    
+                    // Se nenhum tem review (ambos novos), randomiza
+                    if (!revA && !revB) return Math.random() - 0.5;
+                    // Se um é novo e o outro não, o velho (vencido) vem primeiro
+                    if (revA && !revB) return -1;
+                    if (!revA && revB) return 1;
+
+                    // Ambos tem review, ordena por data
+                    const dateA = revA.dueDate.toDate ? revA.dueDate.toDate() : new Date(revA.dueDate);
+                    const dateB = revB.dueDate.toDate ? revB.dueDate.toDate() : new Date(revB.dueDate);
+                    return dateA - dateB;
+                });
+
                 setStudyQueue(queue);
                 setView("study");
             };
@@ -551,7 +514,7 @@
                             <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
                             <Cpu size={24} className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" />
                         </div>
-                        <span className="font-mono text-sm tracking-[0.2em] mt-6 text-blue-400">INICIANDO O L1 CACHE v2.0</span>
+                        <span className="font-mono text-sm tracking-[0.2em] mt-6 text-blue-400">CARREGANDO ENGINE ANKI v2.1</span>
                     </div>
                 );
             }
@@ -566,7 +529,7 @@
                                 <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-2 rounded-lg shadow-lg shadow-blue-900/20 group-hover:scale-105 transition-transform">
                                     <Cpu size={20} className="text-white" />
                                 </div>
-                                <span className="text-white tracking-tight">L1 <span className="text-blue-500">Cache</span> <span className="text-[10px] bg-slate-800 px-1 py-0.5 rounded text-slate-400 align-top">v2.0</span></span>
+                                <span className="text-white tracking-tight">L1 <span className="text-blue-500">Cache</span> <span className="text-[10px] bg-slate-800 px-1 py-0.5 rounded text-slate-400 align-top">v2.1</span></span>
                             </div>
                             <div className="flex items-center gap-4">
                                 {user && <button onClick={() => setView("leaderboard")} className="text-yellow-500 flex items-center gap-1.5 text-sm hover:text-yellow-400 font-medium bg-yellow-500/10 px-3 py-1.5 rounded-full border border-yellow-500/20 transition-all hover:bg-yellow-500/20"><Trophy size={14} /> Ranking</button>}
@@ -579,11 +542,10 @@
                     <main className="flex-1 max-w-6xl mx-auto w-full p-4">
                         {view === "decks" && (
                             <>
-                                <DecksView structure={getDecksStructure()} startStudy={startStudy} totalCards={cards.length} reviews={reviews} onCustomStudy={() => setCustomStudyOpen(true)} />
-                                <CustomStudyModal isOpen={customStudyOpen} onClose={() => setCustomStudyOpen(false)} onStart={startCustomStudy} categories={[...new Set(cards.map(c => normalize(c.category)))]} />
+                                <DecksView structure={getDecksStructure()} startStudy={startStudy} totalCards={cards.length} reviews={reviews} />
                             </>
                         )}
-                        {/* Note: Pass studyQueue as initialQueue so StudySession can manage its own internal queue state */}
+                        {/* A Fila agora é gerenciada internamente pela StudySession para reordenação dinâmica */}
                         {view === "study" && <StudySession initialQueue={studyQueue} user={user} reviews={reviews} setReviews={setReviews} onFinish={() => setView("decks")} />}
                         {view === "leaderboard" && <LeaderboardView />}
                         {view === "admin" && isAdmin && <AdminPanel cards={cards} setCards={setCards} onExit={() => setView("decks")} />}
@@ -613,15 +575,15 @@
                     <div className="w-full max-w-md glass p-8 rounded-2xl shadow-2xl relative z-10 animate-slide-up">
                         <div className="text-center mb-8">
                             <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-blue-500/30"><Cpu size={32} /></div>
-                            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">L1 Cache <span className="text-blue-400">2.9</span></h1>
-                            <p className="text-slate-400 text-sm">Latência zero para seu aprendizado.</p>
+                            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">L1 Cache <span className="text-blue-400">2.1</span></h1>
+                            <p className="text-slate-400 text-sm">Engine Anki Completa.</p>
                         </div>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-3">
                                 <input type="email" placeholder="Email Acadêmico" className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 p-3 rounded-xl text-white outline-none transition-all placeholder:text-slate-600" value={email} onChange={e => setEmail(e.target.value)} />
                                 <input type="password" placeholder="Senha" className="w-full bg-slate-900/50 border border-slate-700 focus:border-blue-500 p-3 rounded-xl text-white outline-none transition-all placeholder:text-slate-600" value={password} onChange={e => setPassword(e.target.value)} />
                             </div>
-                            <button disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold p-3.5 rounded-xl shadow-lg shadow-blue-900/20 transition-all transform hover:scale-[1.02] disabled:opacity-50">{loading ? "Acessando Mainframe..." : (isRegister ? "Registrar Matrícula" : "Login no Sistema")}</button>
+                            <button disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold p-3.5 rounded-xl shadow-lg shadow-blue-900/20 transition-all transform hover:scale-[1.02] disabled:opacity-50">{loading ? "Acessando..." : (isRegister ? "Registrar" : "Login")}</button>
                         </form>
                         <div className="mt-6 flex justify-between text-sm text-slate-500 pt-4 border-t border-slate-700/50">
                             <button onClick={() => setIsRegister(!isRegister)} className="hover:text-blue-400 transition-colors">{isRegister ? "Já tenho conta" : "Criar nova conta"}</button>
@@ -644,7 +606,7 @@
                         </div>
                         <div className="flex items-center gap-3">
                             <span className="text-xs font-mono text-slate-500">{totalLessonCards} cards</span>
-                            <button onClick={(e) => { e.stopPropagation(); startStudy(category, lesson); }} className="px-3 py-1 text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded border border-blue-600/30 transition-all font-bold" title="Estudar toda esta aula">Estudar Aula</button>
+                            <button onClick={(e) => { e.stopPropagation(); startStudy(category, lesson); }} className="px-3 py-1 text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded border border-blue-600/30 transition-all font-bold" title="Estudar toda esta aula">Estudar</button>
                         </div>
                     </div>
                     <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
@@ -663,7 +625,7 @@
             );
         };
 
-        const DecksView = ({ structure, startStudy, totalCards, reviews, onCustomStudy }) => {
+        const DecksView = ({ structure, startStudy, totalCards, reviews }) => {
             return (
                 <div className="animate-fade-in space-y-6">
                     <header className="border-b border-slate-800 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -671,10 +633,9 @@
                             <h2 className="text-3xl font-bold text-white mb-2">Painel de Controle</h2>
                             <div className="flex gap-6 text-sm text-slate-400 font-mono">
                                 <div className="flex items-center gap-2"><div className="w-2 h-2 bg-blue-500 rounded-full"></div> {totalCards} Cards Totais</div>
-                                <div className="flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div> {Object.keys(reviews).length} Memorizados</div>
+                                <div className="flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div> {Object.keys(reviews).length} Estudados</div>
                             </div>
                         </div>
-                        <button onClick={onCustomStudy} className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-5 py-3 rounded-xl font-bold transition-all flex items-center gap-2 hover:border-blue-500"><Settings size={18} className="text-blue-400"/> Estudo Personalizado</button>
                     </header>
                     <Heatmap reviews={reviews} />
                     <div className="grid gap-6">
@@ -725,7 +686,7 @@
                                         <td className="p-5 font-bold text-slate-500 font-mono">#{i+1}</td>
                                         <td className="p-5 text-white font-medium flex items-center gap-2">{i === 0 && <span className="text-xl">👑</span>} {l.email ? l.email.split('@')[0] : 'Anônimo'}</td>
                                         <td className="p-5 text-center text-blue-400 font-mono font-bold bg-blue-500/5">{l.total || 0}</td>
-                                        <td className="p-5 text-center text-slate-300 font-mono text-sm">{formatDuration(l.timeStudied || 0)}</td>
+                                        <td className="p-5 text-center text-slate-300 font-mono text-sm">{'-'}</td>
                                         <td className="p-5 text-center"><span className={`px-3 py-1 rounded-full text-xs font-bold border ${l.retention > 80 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>{l.retention ? l.retention.toFixed(1) : 0}%</span></td>
                                     </tr>
                                 ))}
@@ -765,10 +726,7 @@
 
             const handleSave = async (e) => {
                 e.preventDefault();
-                if(!form.front || !form.back) {
-                      alert("Por favor, preencha a Pergunta (Frente) e a Resposta (Verso) antes de salvar.");
-                      return;
-                }
+                if(!form.front || !form.back) { alert("Preencha Frente e Verso."); return; }
                 try {
                     const dataToSave = {
                         front: form.front,
@@ -780,15 +738,12 @@
 
                     if (editingId) {
                         await updateDoc(doc(db, "cards", editingId), dataToSave);
-                        // FIX CRÍTICO: Usa atualização funcional para garantir estado consistente
                         setCards(prevCards => prevCards.map(c => c.id === editingId ? { ...c, ...dataToSave } : c));
                         setEditingId(null);
                     } else {
                         const ref = await addDoc(collection(db, "cards"), { ...dataToSave, createdAt: serverTimestamp() });
-                        // FIX CRÍTICO: Usa atualização funcional
                         setCards(prevCards => [...prevCards, { id: ref.id, ...dataToSave }]);
                     }
-                    // FIX CRÍTICO: Reset seguro
                     setForm(prev => ({ ...prev, front: '', back: '' })); 
                 } catch (e) { alert("Erro ao salvar: " + e.message); }
             };
@@ -811,6 +766,36 @@
                 } 
             };
 
+            const RichTextEditor = ({ value, onChange }) => {
+                const editorRef = React.useRef(null);
+                
+                React.useEffect(() => {
+                    if (editorRef.current && editorRef.current.innerHTML !== value) {
+                        editorRef.current.innerHTML = value || '';
+                    }
+                }, [value]);
+
+                const execCmd = (cmd) => { document.execCommand(cmd, false, null); };
+                const execBlock = (tag) => { document.execCommand('formatBlock', false, tag); };
+
+                return (
+                    <div className="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden flex flex-col h-40 focus-within:border-blue-500 transition-colors">
+                        <div className="bg-slate-800 p-2 flex gap-1 border-b border-slate-700 flex-wrap">
+                            <button type="button" onClick={() => execCmd('bold')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Negrito"><Bold size={16}/></button>
+                            <button type="button" onClick={() => execCmd('italic')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Itálico"><Italic size={16}/></button>
+                            <button type="button" onClick={() => execCmd('insertUnorderedList')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Lista"><List size={16}/></button>
+                            <button type="button" onClick={() => execBlock('pre')} className="p-1.5 hover:bg-slate-700 rounded text-purple-400" title="Inserir Código (Bloco)"><Code size={16}/></button>
+                        </div>
+                        <div 
+                            ref={editorRef}
+                            className="flex-1 p-4 text-white focus:outline-none overflow-y-auto prose text-sm" 
+                            contentEditable 
+                            onInput={(e) => onChange(e.currentTarget.innerHTML)}
+                        ></div>
+                    </div>
+                );
+            };
+
             return (
                 <div className="glass p-6 rounded-2xl border border-slate-700 min-h-screen md:h-[calc(100vh-100px)] flex flex-col shadow-2xl">
                     <div className="flex justify-between mb-4 border-b border-slate-700 pb-4 flex-shrink-0">
@@ -825,14 +810,6 @@
                                     <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 outline-none focus:border-blue-500 transition-colors">
                                         <option value="Todos">Todas Matérias</option>
                                         {existingCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                    </select>
-                                    <select value={filterLesson} onChange={(e) => setFilterLesson(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 outline-none focus:border-blue-500 transition-colors">
-                                        <option value="Todos">Todas Aulas</option>
-                                        {existingLessons.map(l => <option key={l} value={l}>{l}</option>)}
-                                    </select>
-                                    <select value={filterSubcategory} onChange={(e) => setFilterSubcategory(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 outline-none focus:border-blue-500 transition-colors">
-                                        <option value="Todos">Todos Tópicos</option>
-                                        {existingSubcategories.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                     <div className="relative">
                                         <input type="text" placeholder="Buscar na frente..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg p-2 pl-8 outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"/>
@@ -893,7 +870,7 @@
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<ErrorBoundary><App /></ErrorBoundary>);
+        root.render(<App />);
     </script>
 </body>
 </html>

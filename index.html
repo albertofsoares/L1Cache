@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L1 Cache v1.0</title>
+    <title>L1 Cache v1.0 (SM-2)</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -76,7 +76,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, getDoc, doc, setDoc, deleteDoc, updateDoc, serverTimestamp, query, where, increment, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle } from "https://esm.sh/lucide-react@0.344.0?bundle";
+        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock } from "https://esm.sh/lucide-react@0.344.0?bundle";
 
         const firebaseConfig = {
             apiKey: "AIzaSyClIIJkYOmAvEKPtXvG-SIi9SzxQpaBN9s",
@@ -110,19 +110,17 @@
             }
         }
 
-        // --- ENGINE ANKI (SM-2 REAL & FIEL) ---
-        // Constantes do Algoritmo
-        const LEARNING_STEPS = [1, 10]; // 1 minuto, 10 minutos
-        const GRADUATING_INTERVAL = 1; // 1 dia
-        const EASY_INTERVAL = 4; // 4 dias
-        const STARTING_EASE = 2.5; // 250%
+        // --- ENGINE ANKI (SM-2) ---
+        const LEARNING_STEPS = [1, 10]; 
+        const GRADUATING_INTERVAL = 1; 
+        const EASY_INTERVAL = 4; 
+        const STARTING_EASE = 2.5; 
 
         const calculateNextReview = (rating, currentData) => {
-            // Defaults para card novo
-            let interval = currentData?.interval || 0; // Em dias (se state == review) ou minutos (se learning)
+            let interval = currentData?.interval || 0; 
             let ease = currentData?.ease || STARTING_EASE;
-            let state = currentData?.state || 'new'; // 'new', 'learning', 'review', 'relearning'
-            let step = currentData?.step || 0; // Índice no LEARNING_STEPS
+            let state = currentData?.state || 'new'; 
+            let step = currentData?.step || 0; 
 
             let newInterval = 0;
             let newEase = ease;
@@ -130,106 +128,79 @@
             let newStep = step;
             let dueMinutes = 0;
 
-            // --- Lógica para Cards Novos ou em Aprendizado (Learning/Relearning) ---
             if (state === 'new' || state === 'learning' || state === 'relearning') {
                 if (rating === 1) { 
-                    // Again: Volta pro passo 0
                     newStep = 0;
                     dueMinutes = LEARNING_STEPS[0];
-                    newState = state === 'new' ? 'learning' : state; // Mantém learning ou relearning
+                    newState = state === 'new' ? 'learning' : state; 
                 } 
                 else if (rating === 2) { 
-                    // Hard: Repete passo atual ou média (Simplificação Anki: média entre passos ou 1.5x passo atual)
-                    // Aqui usaremos: repete o passo atual mas garante que não seja instantâneo
                     dueMinutes = Math.floor((LEARNING_STEPS[step] || LEARNING_STEPS[0]) * 1.5);
                     if (dueMinutes < 1) dueMinutes = 1;
                     newState = state === 'new' ? 'learning' : state;
                 } 
                 else if (rating === 3) { 
-                    // Good: Avança passo
                     if (step < LEARNING_STEPS.length - 1) {
                         newStep = step + 1;
                         dueMinutes = LEARNING_STEPS[newStep];
                         newState = 'learning';
                     } else {
-                        // Graduando!
-                        newInterval = GRADUATING_INTERVAL; // 1 dia
+                        newInterval = GRADUATING_INTERVAL; 
                         newState = 'review';
                         newStep = 0;
                     }
                 } 
                 else if (rating === 4) { 
-                    // Easy: Gradua Imediatamente
-                    newInterval = EASY_INTERVAL; // 4 dias
+                    newInterval = EASY_INTERVAL; 
                     newState = 'review';
                     newStep = 0;
                 }
             } 
-            // --- Lógica para Cards Graduados (Review) ---
             else if (state === 'review') {
                 if (rating === 1) { 
-                    // Again (Lapse): Esqueceu!
                     newEase = Math.max(1.3, ease - 0.20);
-                    newInterval = 1; // Reseta para 1 dia (alguns configs do Anki jogam pra learning, aqui simplificamos pra 1 dia ou Relearning)
-                    
-                    // Comportamento Anki Padrão: Lapse -> Relearning Step 1 (10 min)
+                    newInterval = 1; 
                     newState = 'relearning';
                     newStep = 0;
-                    dueMinutes = 10; // Lapse step
+                    dueMinutes = 10; 
                 } 
                 else if (rating === 2) { 
-                    // Hard: Intervalo cresce pouco (1.2x) e Ease cai
                     newEase = Math.max(1.3, ease - 0.15);
                     newInterval = Math.floor(interval * 1.2);
                     newState = 'review';
                 } 
                 else if (rating === 3) { 
-                    // Good: Intervalo * Ease
                     newInterval = Math.floor(interval * ease);
                     newState = 'review';
                 } 
                 else if (rating === 4) { 
-                    // Easy: Intervalo * Ease * Bonus
                     newEase = ease + 0.15;
                     newInterval = Math.floor(interval * ease * 1.3);
                     newState = 'review';
                 }
             }
 
-            // Calculo da Data de Vencimento
             const now = new Date();
             let dueDate;
             let requeue = false;
 
             if (newState === 'learning' || newState === 'relearning') {
-                // Minutos
                 dueDate = new Date(now.getTime() + dueMinutes * 60000);
-                newInterval = dueMinutes; // Armazena em minutos para display
-                requeue = true; // IMPORTANTE: Voltar na mesma sessão
+                newInterval = dueMinutes; 
+                requeue = true; 
             } else {
-                // Dias
-                // Adiciona dias e reseta para o horário atual ou início do dia
                 dueDate = new Date(now.getTime() + (Math.max(1, newInterval) * 24 * 60 * 60 * 1000));
-                requeue = false; // Sai da sessão
+                requeue = false; 
             }
 
-            return { 
-                interval: newInterval, 
-                ease: newEase, 
-                state: newState, 
-                step: newStep,
-                dueDate: dueDate,
-                requeue: requeue // Flag para controlar a UI
-            };
+            return { interval: newInterval, ease: newEase, state: newState, step: newStep, dueDate: dueDate, requeue: requeue };
         };
 
         const formatTimeLabel = (minutes, isReviewState) => {
             if (isReviewState) {
-                // Se é review e o intervalo é > 0, tratamos como dias
                 if (minutes === 1) return '1d';
                 return `${Math.round(minutes)}d`;
             }
-            // Se é learning/relearning, é minutos
             if (minutes < 60) return `${Math.round(minutes)}m`;
             if (minutes < 1440) return `${Math.round(minutes/60)}h`;
             return `${Math.round(minutes/1440)}d`;
@@ -267,24 +238,24 @@
             const activityMap = {};
             Object.values(reviews).forEach(r => {
                 if(r.lastReviewed) {
-                   const dateKey = r.lastReviewed.toDate().toISOString().split('T')[0];
+                   const dateKey = r.lastReviewed.toDate ? r.lastReviewed.toDate().toISOString().split('T')[0] : new Date(r.lastReviewed).toISOString().split('T')[0];
                    activityMap[dateKey] = (activityMap[dateKey] || 0) + 1;
                 }
             });
             return (
                 <div className="glass p-4 rounded-xl mb-6">
                     <div className="flex items-center gap-2 mb-3 text-slate-400 text-xs uppercase font-bold tracking-wider">
-                        <Calendar size={14} /> Consistency Streak (Últimos 30 dias)
+                        <Calendar size={14} /> Frequência de Revisão (Últimos 30 dias)
                     </div>
                     <div className="flex justify-between gap-1">
                         {days.map(day => {
                             const count = activityMap[day] || 0;
                             let colorClass = "bg-slate-800";
                             if (count > 0) colorClass = "bg-blue-900";
-                            if (count > 5) colorClass = "bg-blue-700";
-                            if (count > 10) colorClass = "bg-blue-500";
-                            if (count > 20) colorClass = "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]";
-                            return (<div key={day} title={`${day}: ${count} reviews`} className={`w-full h-8 rounded-sm transition-all duration-500 ${colorClass} hover:scale-125`}></div>);
+                            if (count > 10) colorClass = "bg-blue-700";
+                            if (count > 30) colorClass = "bg-blue-500";
+                            if (count > 60) colorClass = "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]";
+                            return (<div key={day} title={`${day}: ${count} revisões`} className={`w-full h-8 rounded-sm transition-all duration-500 ${colorClass} hover:scale-125 cursor-pointer`}></div>);
                         })}
                     </div>
                 </div>
@@ -359,8 +330,8 @@
             );
         };
 
-        // --- STUDY SESSION (CORRIGIDA PARA COMPORTAMENTO ANKI) ---
-        const StudySession = ({ initialQueue, user, reviews, setReviews, onFinish }) => {
+        // --- STUDY SESSION ---
+        const StudySession = ({ initialQueue, user, reviews, setReviews, userStats, setUserStats, onFinish }) => {
             const [queue, setQueue] = React.useState(initialQueue);
             const [index, setIndex] = React.useState(0);
             const [isFlipped, setIsFlipped] = React.useState(false);
@@ -368,8 +339,6 @@
             const [cardStartTime, setCardStartTime] = React.useState(Date.now());
             const [requeueNotice, setRequeueNotice] = React.useState(null);
 
-            // Progress is based on "cards graduated/reviewed for the day" vs "total cards seen this session"
-            // To simplify: just queue position
             const progress = queue.length > 0 ? ((index) / queue.length) * 100 : 100;
 
             const handleUndo = () => {
@@ -399,17 +368,15 @@
                         <div className="absolute top-0 left-0 w-full p-4 flex justify-start"><button onClick={handleUndo} className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 border border-slate-700 text-sm"><Undo2 size={16} /> Desfazer Último</button></div>
                         <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 mb-6 border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]"><Check size={48} /></div>
                         <h2 className="text-3xl font-bold text-white mb-2">Buffer Limpo</h2>
-                        <p className="text-slate-400 mb-8">Sessão completa. Nenhum card pendente para curto prazo.</p>
-                        <button onClick={onFinish} className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg border border-slate-700">Voltar ao Root</button>
+                        <p className="text-slate-400 mb-8">Sessão completa. Bom trabalho na manutenção da sua retenção.</p>
+                        <button onClick={onFinish} className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg border border-slate-700">Voltar ao Dashboard</button>
                     </div>
                 );
             }
 
             const card = queue[index];
-            // Use local override review data if available (for cards re-queued in this session), else use global reviews
             const currentData = card.tempReviewData || reviews[card.id] || { interval: 0, ease: 2.5, state: 'new', step: 0 };
             
-            // Generate options based on current state
             const options = { 
                 1: calculateNextReview(1, currentData), 
                 2: calculateNextReview(2, currentData), 
@@ -422,35 +389,61 @@
                 setCardStartTime(Date.now());
                 const result = calculateNextReview(rating, currentData);
 
-                // --- ANKI LOGIC FIX ---
-                // Se result.requeue é true, significa que o card ainda está em fase de aprendizado (minutos)
-                // e deve reaparecer na mesma sessão.
-
+                // Requeue logic for learning cards
                 if (result.requeue) {
                     const requeuedCard = {
                         ...card,
-                        tempReviewData: result // Salva o estado intermediário (ex: learning step 1)
+                        tempReviewData: result 
                     };
-                    
-                    // Adiciona ao final da fila para garantir que será visto novamente
                     setQueue(prev => [...prev, requeuedCard]);
                     
-                    // Feedback visual
                     const isReview = result.state === 'review';
                     const timeLabel = formatTimeLabel(result.interval, isReview);
                     setRequeueNotice(`Reagendado: ${timeLabel}`);
                     setTimeout(() => setRequeueNotice(null), 3000);
                 }
 
-                if (user) {
-                    // Atualiza o estado global e DB
+                if (user && userStats) {
+                    // 1. Atualiza Reviews (Progresso individual do card)
                     const newReviews = { ...reviews, [card.id]: { ...result, dueDate: { toDate: () => result.dueDate }, lastReviewed: { toDate: () => new Date() } } };
                     setReviews(newReviews);
+                    
                     try {
                         await setDoc(doc(db, `users/${user.uid}/reviews/${card.id}`), { ...result, lastReviewed: serverTimestamp() });
+                    } catch(e) { console.error("Erro ao salvar card:", e); }
+
+                    // 2. Atualiza Estatísticas Globais do Usuário (Sistema de Ranking/Stats)
+                    const isCorrect = rating > 1; // 1 é "Again/Errei", o resto é acerto ou acerto com dificuldade
+                    const todayStr = new Date().toISOString().split('T')[0];
+
+                    const updatedStats = { ...userStats };
+                    updatedStats.timeStudied = (updatedStats.timeStudied || 0) + timeSpent;
+                    updatedStats.cardsSeen = (updatedStats.cardsSeen || 0) + 1;
+                    
+                    if (isCorrect) {
+                        updatedStats.correctAnswers = (updatedStats.correctAnswers || 0) + 1;
+                        updatedStats.currentStreak = (updatedStats.currentStreak || 0) + 1;
+                    } else {
+                        updatedStats.currentStreak = 0; // Quebra o streak se errar
+                    }
+                    
+                    // Recalcula Retenção (%)
+                    updatedStats.retention = (updatedStats.correctAnswers / updatedStats.cardsSeen) * 100;
+
+                    // Atualiza a atividade diária (Para cálculo dos últimos 31 dias)
+                    updatedStats.dailyActivity = updatedStats.dailyActivity || {};
+                    updatedStats.dailyActivity[todayStr] = (updatedStats.dailyActivity[todayStr] || 0) + 1;
+
+                    setUserStats(updatedStats);
+
+                    try {
                         const statsRef = doc(db, 'leaderboard', user.uid);
-                        await setDoc(statsRef, { email: user.email, timeStudied: increment(timeSpent), lastActive: serverTimestamp() }, { merge: true });
-                    } catch(e) { console.error("Erro ao salvar progresso:", e); }
+                        await setDoc(statsRef, { 
+                            email: user.email,
+                            ...updatedStats, 
+                            lastActive: serverTimestamp() 
+                        }, { merge: true });
+                    } catch(e) { console.error("Erro ao salvar stats:", e); }
                 }
 
                 setIsFlipped(false);
@@ -479,20 +472,30 @@
                     )}
 
                     <div className="w-full h-1 bg-slate-800 rounded-full mb-4 overflow-hidden"><div className="h-full bg-blue-500 transition-all duration-500 ease-out shadow-[0_0_10px_#3b82f6]" style={{ width: `${progress}%` }}></div></div>
+                    
+                    {/* Header de Status */}
                     <div className="flex justify-between items-center text-xs text-slate-500 uppercase tracking-widest mb-4 px-2">
                         <div className="flex items-center gap-4">
                             <button onClick={handleUndo} disabled={index === 0} title="Desfazer (Ctrl+Z)" className={`flex items-center gap-1 transition-colors ${index === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`}><Undo2 size={16} /> <span className="hidden sm:inline">Desfazer</span></button>
                             <div className="flex items-center gap-2">
                                 <span className="bg-slate-900 px-2 py-1 rounded text-blue-400 border border-slate-800">{card.category}</span>
                                 <span className="text-slate-600">/</span>
-                                <span className="text-slate-300">{card.lesson || 'Geral'}</span>
+                                <span className="text-slate-300 truncate max-w-[150px]">{card.lesson || 'Geral'}</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
                             {getStateBadge()}
-                            <div className="flex items-center gap-2"><Layers size={14} className="text-slate-600"/><span>{queue.length - index} restantes</span></div>
+                            <div className="flex items-center gap-2 font-mono"><Layers size={14} className="text-slate-600"/><span>{queue.length - index} restantes</span></div>
                         </div>
                     </div>
+                    
+                    {/* Indicador de Streak em Tempo Real (Opcional, mas ajuda na motivação) */}
+                    {userStats && userStats.currentStreak > 2 && (
+                        <div className="absolute -top-12 right-0 flex items-center gap-1 text-orange-500 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20 font-bold text-sm animate-pulse-slow">
+                            <Flame size={16} /> Streak: {userStats.currentStreak}
+                        </div>
+                    )}
+
                     <div className="relative flex-1 group">
                         <div className={`w-full h-full duration-500 transform-style-3d transition-transform relative ${isFlipped ? 'rotate-y-180' : ''}`}>
                             <div className="absolute inset-0 backface-hidden glass border border-slate-700 rounded-3xl p-6 md:p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden bg-slate-900/90">
@@ -539,6 +542,7 @@
             const [view, setView] = React.useState("loading"); 
             const [cards, setCards] = React.useState([]);
             const [reviews, setReviews] = React.useState({});
+            const [userStats, setUserStats] = React.useState(null);
             const [studyQueue, setStudyQueue] = React.useState([]);
             const [customStudyOpen, setCustomStudyOpen] = React.useState(false);
             
@@ -551,6 +555,7 @@
                     } else {
                         setIsAdmin(false);
                         setReviews({});
+                        setUserStats(null);
                         await loadPublicCards();
                     }
                     setView(currentUser ? "decks" : "auth");
@@ -579,15 +584,31 @@
             const loadUserData = async (currentUser) => {
                 await loadPublicCards();
                 try {
+                    // Carrega Reviews Individuais (SM-2 data)
                     const q = query(collection(db, `users/${currentUser.uid}/reviews`));
                     const snapshot = await getDocs(q);
                     const userReviews = {};
                     snapshot.forEach(doc => { userReviews[doc.id] = doc.data(); });
                     setReviews(userReviews);
+                    
+                    // Carrega Estatísticas para o Leaderboard / User Profile
                     const statsRef = doc(db, 'leaderboard', currentUser.uid);
                     const statsSnap = await getDoc(statsRef);
+                    
                     if (!statsSnap.exists()) {
-                        await setDoc(statsRef, { email: currentUser.email, total: 0, retention: 0, timeStudied: 0, lastActive: serverTimestamp() });
+                        const defaultStats = { 
+                            email: currentUser.email, 
+                            cardsSeen: 0, 
+                            correctAnswers: 0, 
+                            retention: 0, 
+                            timeStudied: 0, 
+                            currentStreak: 0,
+                            dailyActivity: {}
+                        };
+                        await setDoc(statsRef, { ...defaultStats, lastActive: serverTimestamp() });
+                        setUserStats(defaultStats);
+                    } else {
+                        setUserStats(statsSnap.data());
                     }
                 } catch (error) { console.error("Erro progresso:", error); setReviews({}); }
             };
@@ -692,9 +713,9 @@
                                 <span className="text-white tracking-tight">L1 <span className="text-blue-500">Cache</span> <span className="text-[10px] bg-slate-800 px-1 py-0.5 rounded text-slate-400 align-top">v1.0</span></span>
                             </div>
                             <div className="flex items-center gap-4">
-                                {user && <button onClick={() => setView("leaderboard")} className="text-yellow-500 flex items-center gap-1.5 text-sm hover:text-yellow-400 font-medium bg-yellow-500/10 px-3 py-1.5 rounded-full border border-yellow-500/20 transition-all hover:bg-yellow-500/20"><Trophy size={14} /> Ranking</button>}
+                                {user && <button onClick={() => setView("leaderboard")} className="text-yellow-500 flex items-center gap-1.5 text-sm hover:text-yellow-400 font-medium bg-yellow-500/10 px-3 py-1.5 rounded-full border border-yellow-500/20 transition-all hover:bg-yellow-500/20"><Trophy size={14} /> Ranking Global</button>}
                                 {isAdmin && <button onClick={() => setView("admin")} className="text-amber-500 hover:text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20 transition-all flex items-center gap-1.5 text-sm"><Lock size={14} /> Admin</button>}
-                                {user ? <button onClick={() => signOut(auth)} className="text-slate-400 hover:text-red-400 transition-colors"><LogOut size={20}/></button> : null}
+                                {user ? <button onClick={() => signOut(auth)} className="text-slate-400 hover:text-red-400 transition-colors" title="Sair"><LogOut size={20}/></button> : null}
                             </div>
                         </div>
                     </nav>
@@ -706,8 +727,7 @@
                                 <CustomStudyModal isOpen={customStudyOpen} onClose={() => setCustomStudyOpen(false)} onStart={startCustomStudy} categories={[...new Set(cards.map(c => normalize(c.category)))]} />
                             </>
                         )}
-                        {/* Note: Pass studyQueue as initialQueue so StudySession can manage its own internal queue state */}
-                        {view === "study" && <StudySession initialQueue={studyQueue} user={user} reviews={reviews} setReviews={setReviews} onFinish={() => setView("decks")} />}
+                        {view === "study" && <StudySession initialQueue={studyQueue} user={user} reviews={reviews} setReviews={setReviews} userStats={userStats} setUserStats={setUserStats} onFinish={() => setView("decks")} />}
                         {view === "leaderboard" && <LeaderboardView />}
                         {view === "admin" && isAdmin && <AdminPanel cards={cards} setCards={setCards} onExit={() => setView("decks")} />}
                     </main>
@@ -737,7 +757,7 @@
                         <div className="text-center mb-8">
                             <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-blue-500/30"><Cpu size={32} /></div>
                             <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">L1 Cache <span className="text-blue-400">2.1</span></h1>
-                            <p className="text-slate-400 text-sm">Engine Anki (SM-2) para retenção máxima.</p>
+                            <p className="text-slate-400 text-sm">Engine Anki (SM-2) para retenção máxima em Ciência da Computação.</p>
                         </div>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-3">
@@ -821,35 +841,102 @@
         const LeaderboardView = () => {
             const [leaders, setLeaders] = React.useState([]);
             const [loading, setLoading] = React.useState(true);
+            
+            // Helper para calcular a soma dos últimos 31 dias a partir do objeto dailyActivity
+            const calculateLast31Days = (dailyActivity) => {
+                if (!dailyActivity) return 0;
+                let total = 0;
+                const today = new Date();
+                for (let i = 0; i < 31; i++) {
+                    const targetDate = new Date(today);
+                    targetDate.setDate(targetDate.getDate() - i);
+                    const dateStr = targetDate.toISOString().split('T')[0];
+                    if (dailyActivity[dateStr]) {
+                        total += dailyActivity[dateStr];
+                    }
+                }
+                return total;
+            };
+
             React.useEffect(() => {
                 const load = async () => {
                     try {
-                        const q = query(collection(db, 'leaderboard'), orderBy('retention', 'desc'), limit(50));
+                        // Agora ordenamos pelo total de cards vistos (XP real do Anki)
+                        const q = query(collection(db, 'leaderboard'), orderBy('cardsSeen', 'desc'), limit(50));
                         const snap = await getDocs(q);
-                        setLeaders(snap.docs.map(d => d.data()));
+                        
+                        // Fallback temporário caso cardsSeen não exista, tenta usar total
+                        const fetchedLeaders = snap.docs.map(d => {
+                            const data = d.data();
+                            return {
+                                ...data,
+                                cardsSeen: data.cardsSeen || data.total || 0,
+                                retention: data.retention || 0,
+                                timeStudied: data.timeStudied || 0,
+                                currentStreak: data.currentStreak || 0,
+                                dailyActivity: data.dailyActivity || {}
+                            };
+                        });
+                        
+                        setLeaders(fetchedLeaders.sort((a,b) => b.cardsSeen - a.cardsSeen));
                     } catch (e) { console.error("Erro Leaderboard:", e); } finally { setLoading(false); }
                 };
                 load();
             }, []);
+
             return (
-                <div className="max-w-4xl mx-auto animate-fade-in">
-                    <div className="flex items-center gap-4 mb-8 p-4 glass rounded-xl">
-                        <div className="p-3 bg-yellow-500/10 rounded-xl border border-yellow-500/20"><Trophy className="text-yellow-500" size={24}/></div>
-                        <div><h2 className="text-2xl font-bold text-white">Ranking Global</h2><p className="text-slate-400 text-sm">Top estudantes por retenção e tempo</p></div>
+                <div className="max-w-5xl mx-auto animate-fade-in">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 p-6 glass rounded-2xl border border-slate-700/50">
+                        <div className="flex items-center gap-4">
+                            <div className="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.1)]"><Trophy className="text-yellow-500" size={32}/></div>
+                            <div>
+                                <h2 className="text-3xl font-bold text-white tracking-tight">Anki Leaderboard Global</h2>
+                                <p className="text-slate-400 text-sm mt-1">Ranking baseado em constância, volume e precisão.</p>
+                            </div>
+                        </div>
                     </div>
-                    <div className="glass rounded-xl overflow-hidden shadow-xl overflow-x-auto">
-                        <table className="w-full text-left border-collapse min-w-[600px]">
-                            <thead className="bg-slate-900/80 text-slate-400 uppercase text-xs font-bold tracking-wider">
-                                <tr><th className="p-5 border-b border-slate-800">Rank</th><th className="p-5 border-b border-slate-800">Estudante</th><th className="p-5 border-b border-slate-800 text-center">XP</th><th className="p-5 border-b border-slate-800 text-center">Tempo</th><th className="p-5 border-b border-slate-800 text-center">Retenção</th></tr>
+
+                    <div className="glass rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50 overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[800px]">
+                            <thead className="bg-slate-900/90 text-slate-400 uppercase text-[10px] md:text-xs font-bold tracking-wider">
+                                <tr>
+                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center w-16">Rank</th>
+                                    <th className="p-4 md:p-5 border-b border-slate-800">Estudante</th>
+                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1"><Layers size={14}/> Cards (XP)</div></th>
+                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1"><Clock size={14}/> Tempo</div></th>
+                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1 text-orange-500"><Flame size={14}/> Streak</div></th>
+                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1"><TrendingUp size={14}/> Últ. 31 Dias</div></th>
+                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center"><div className="flex items-center justify-center gap-1"><Target size={14}/> Retenção</div></th>
+                                </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-800">
-                                {leaders.map((l, i) => (
-                                    <tr key={i} className="hover:bg-slate-800/30 transition-colors">
-                                        <td className="p-5 font-bold text-slate-500 font-mono">#{i+1}</td>
-                                        <td className="p-5 text-white font-medium flex items-center gap-2">{i === 0 && <span className="text-xl">👑</span>} {l.email ? l.email.split('@')[0] : 'Anônimo'}</td>
-                                        <td className="p-5 text-center text-blue-400 font-mono font-bold bg-blue-500/5">{l.total || 0}</td>
-                                        <td className="p-5 text-center text-slate-300 font-mono text-sm">{formatDuration(l.timeStudied || 0)}</td>
-                                        <td className="p-5 text-center"><span className={`px-3 py-1 rounded-full text-xs font-bold border ${l.retention > 80 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>{l.retention ? l.retention.toFixed(1) : 0}%</span></td>
+                            <tbody className="divide-y divide-slate-800/50">
+                                {loading ? (
+                                    <tr><td colSpan="7" className="p-8 text-center text-slate-500">Carregando dados da engine...</td></tr>
+                                ) : leaders.map((l, i) => (
+                                    <tr key={i} className={`transition-colors hover:bg-slate-800/40 ${i === 0 ? 'bg-yellow-500/5' : i === 1 ? 'bg-slate-400/5' : i === 2 ? 'bg-amber-700/5' : ''}`}>
+                                        <td className="p-4 md:p-5 text-center font-bold text-slate-500 font-mono text-lg">
+                                            {i === 0 ? <span className="text-yellow-500">1</span> : i === 1 ? <span className="text-slate-300">2</span> : i === 2 ? <span className="text-amber-600">3</span> : i+1}
+                                        </td>
+                                        <td className="p-4 md:p-5 text-white font-medium flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-400">
+                                                {l.email ? l.email.charAt(0).toUpperCase() : '?'}
+                                            </div>
+                                            {l.email ? l.email.split('@')[0] : 'Anônimo'}
+                                        </td>
+                                        <td className="p-4 md:p-5 text-center text-blue-400 font-mono font-bold">{l.cardsSeen.toLocaleString('pt-BR')}</td>
+                                        <td className="p-4 md:p-5 text-center text-slate-300 font-mono text-sm">{formatDuration(l.timeStudied || 0)}</td>
+                                        <td className="p-4 md:p-5 text-center">
+                                            <span className={`inline-flex items-center gap-1 font-mono font-bold ${l.currentStreak >= 3 ? 'text-orange-500' : 'text-slate-500'}`}>
+                                                {l.currentStreak > 0 && <Flame size={12} className={l.currentStreak >= 3 ? 'animate-pulse' : ''}/>} 
+                                                {l.currentStreak}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 md:p-5 text-center text-slate-300 font-mono text-sm">{calculateLast31Days(l.dailyActivity).toLocaleString('pt-BR')}</td>
+                                        <td className="p-4 md:p-5 text-center">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold border inline-block min-w-[60px] ${l.retention > 80 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' : l.retention > 50 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                                {l.retention ? l.retention.toFixed(1) : 0}%
+                                            </span>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -863,7 +950,6 @@
             const [form, setForm] = React.useState({ front: '', back: '', category: 'Geral', lesson: 'Conteúdo Geral', subcategory: '' });
             const [editingId, setEditingId] = React.useState(null);
             
-            // --- ESTADOS DOS FILTROS ---
             const [filterCategory, setFilterCategory] = React.useState('Todos');
             const [filterLesson, setFilterLesson] = React.useState('Todos');
             const [filterSubcategory, setFilterSubcategory] = React.useState('Todos');
@@ -925,7 +1011,7 @@
             };
             
             const handleDelete = async (id) => { 
-                if(confirm("Deletar?")) { 
+                if(confirm("Deletar este node da base de conhecimento?")) { 
                     await deleteDoc(doc(db, "cards", id)); 
                     setCards(prevCards => prevCards.filter(c => c.id !== id)); 
                 } 

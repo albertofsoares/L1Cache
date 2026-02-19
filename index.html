@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L1 Cache v1.0 (SM-2)</title>
+    <title>L1 Cache v2.1 - Engine SM-2</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -344,6 +344,9 @@
             const handleUndo = () => {
                 if (finished) { setFinished(false); setIndex(queue.length - 1); setIsFlipped(true); } 
                 else if (index > 0) { setIndex(index - 1); setIsFlipped(true); }
+                
+                // Correção: Reseta o cronômetro ao desfazer para não acumular tempo irreal
+                setCardStartTime(Date.now());
             };
 
             React.useEffect(() => {
@@ -385,7 +388,12 @@
             };
 
             const handleRate = async (rating) => {
-                const timeSpent = Date.now() - cardStartTime;
+                let timeSpent = Date.now() - cardStartTime;
+                
+                // Correção Anki Engine: Trava de tempo. Limita a 60 segundos (60000ms) 
+                // para evitar bugar o log caso o usuário se afaste do PC ou se distraia.
+                if (timeSpent > 60000) timeSpent = 60000; 
+
                 setCardStartTime(Date.now());
                 const result = calculateNextReview(rating, currentData);
 
@@ -695,7 +703,7 @@
                             <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
                             <Cpu size={24} className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white" />
                         </div>
-                        <span className="font-mono text-sm tracking-[0.2em] mt-6 text-blue-400">INICIANDO O L1 CACHE v1.0</span>
+                        <span className="font-mono text-sm tracking-[0.2em] mt-6 text-blue-400">INICIANDO O L1 CACHE v2.1</span>
                     </div>
                 );
             }
@@ -710,7 +718,7 @@
                                 <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-2 rounded-lg shadow-lg shadow-blue-900/20 group-hover:scale-105 transition-transform">
                                     <Cpu size={20} className="text-white" />
                                 </div>
-                                <span className="text-white tracking-tight">L1 <span className="text-blue-500">Cache</span> <span className="text-[10px] bg-slate-800 px-1 py-0.5 rounded text-slate-400 align-top">v1.0</span></span>
+                                <span className="text-white tracking-tight">L1 <span className="text-blue-500">Cache</span> <span className="text-[10px] bg-slate-800 px-1 py-0.5 rounded text-slate-400 align-top">v2.1</span></span>
                             </div>
                             <div className="flex items-center gap-4">
                                 {user && <button onClick={() => setView("leaderboard")} className="text-yellow-500 flex items-center gap-1.5 text-sm hover:text-yellow-400 font-medium bg-yellow-500/10 px-3 py-1.5 rounded-full border border-yellow-500/20 transition-all hover:bg-yellow-500/20"><Trophy size={14} /> Ranking Global</button>}
@@ -861,8 +869,10 @@
             React.useEffect(() => {
                 const load = async () => {
                     try {
-                        // Agora ordenamos pelo total de cards vistos (XP real do Anki)
-                        const q = query(collection(db, 'leaderboard'), orderBy('cardsSeen', 'desc'), limit(50));
+                        // Correção: Removemos o orderBy e limit da query do Firebase. 
+                        // O Firestore oculta automaticamente quem não possui a coluna 'cardsSeen'.
+                        // Puxamos todos e organizamos via código abaixo para manter usuários antigos.
+                        const q = query(collection(db, 'leaderboard'));
                         const snap = await getDocs(q);
                         
                         // Fallback temporário caso cardsSeen não exista, tenta usar total
@@ -878,7 +888,8 @@
                             };
                         });
                         
-                        setLeaders(fetchedLeaders.sort((a,b) => b.cardsSeen - a.cardsSeen));
+                        // Ordenação Feita no Front-End: 1º por Cards(XP), 2º por Retenção (Desempate)
+                        setLeaders(fetchedLeaders.sort((a,b) => (b.cardsSeen - a.cardsSeen) || (b.retention - a.retention)).slice(0, 50));
                     } catch (e) { console.error("Erro Leaderboard:", e); } finally { setLoading(false); }
                 };
                 load();

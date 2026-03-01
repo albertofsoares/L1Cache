@@ -68,7 +68,6 @@
         .prose pre code { background: transparent; color: #e2e8f0; padding: 0; border: none; }
         .prose { text-align: center; max-width: 100%; }
         
-        /* Nova classe para alinhar o texto do Sobre à esquerda, diferente dos flashcards */
         .prose-left { text-align: left; }
         .prose-left ul { display: block; }
 
@@ -101,7 +100,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, updateDoc, serverTimestamp, query, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag, Network, ListChecks, CheckSquare, BrainCircuit, Sliders, Timer, TerminalSquare, ListTodo, CheckCircle, Circle, HelpCircle, Award, Hash, Globe, AppWindow, Image as ImageIcon, Info } from "https://esm.sh/lucide-react@0.344.0?bundle";
+        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag, Network, ListChecks, CheckSquare, BrainCircuit, Sliders, Timer, TerminalSquare, ListTodo, CheckCircle, Circle, HelpCircle, Award, Hash, Globe, AppWindow, Image as ImageIcon, Info, Headphones } from "https://esm.sh/lucide-react@0.344.0?bundle";
 
         const firebaseConfig = {
             apiKey: "AIzaSyClIIJkYOmAvEKPtXvG-SIi9SzxQpaBN9s",
@@ -125,12 +124,75 @@
             return `${year}-${month}-${day}`;
         };
 
+        // Engine de Áudio (Aprimorada com Gerador Browniano)
         const AudioEngine = (function() {
             let audioCtx = null;
+            let brownNoiseNode = null;
+            let brownNoiseGain = null;
+            let isBrownNoisePlaying = false;
+
             const init = () => {
                 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
             };
+
+            const toggleBrownNoise = (forceState) => {
+                if (!window.AudioContext && !window.webkitAudioContext) return;
+                init();
+                
+                const turnOn = forceState !== undefined ? forceState : !isBrownNoisePlaying;
+                const now = audioCtx.currentTime;
+
+                if (turnOn) {
+                    if (isBrownNoisePlaying) return;
+                    isBrownNoisePlaying = true;
+
+                    // Criação matemática do nó Browniano (Gerado em client-side, 0 dependência externa)
+                    const bufferSize = 4096;
+                    brownNoiseNode = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+                    brownNoiseGain = audioCtx.createGain();
+
+                    let lastOut = 0;
+                    brownNoiseNode.onaudioprocess = function(e) {
+                        const output = e.outputBuffer.getChannelData(0);
+                        for (let i = 0; i < bufferSize; i++) {
+                            const white = Math.random() * 2 - 1; // Ruído Branco
+                            // Integração estocástica com "leak" para gerar o espectro Marrom
+                            lastOut = (lastOut + (0.02 * white)) / 1.02;
+                            output[i] = lastOut * 3.5; // Ajuste compensatório de ganho
+                        }
+                    };
+
+                    brownNoiseGain.gain.setValueAtTime(0, now);
+                    // Fade-in Neuroacústico (Suave, 2 segundos para evitar pico de ansiedade)
+                    brownNoiseGain.gain.linearRampToValueAtTime(0.4, now + 2.0); 
+
+                    brownNoiseNode.connect(brownNoiseGain);
+                    brownNoiseGain.connect(audioCtx.destination);
+                } else {
+                    if (!isBrownNoisePlaying) return;
+                    isBrownNoisePlaying = false;
+
+                    // Fade-out suave (1.5s)
+                    if (brownNoiseGain) {
+                        brownNoiseGain.gain.cancelScheduledValues(now);
+                        brownNoiseGain.gain.setValueAtTime(brownNoiseGain.gain.value, now);
+                        brownNoiseGain.gain.linearRampToValueAtTime(0.001, now + 1.5);
+
+                        const nodeToRemove = brownNoiseNode;
+                        const gainToRemove = brownNoiseGain;
+
+                        setTimeout(() => {
+                            if (nodeToRemove) nodeToRemove.disconnect();
+                            if (gainToRemove) gainToRemove.disconnect();
+                        }, 1600); // Aguarda fade out total antes de matar as conexões
+                    }
+
+                    brownNoiseNode = null;
+                    brownNoiseGain = null;
+                }
+            };
+
             const play = (type) => {
                 if (!window.AudioContext && !window.webkitAudioContext) return;
                 init();
@@ -170,7 +232,7 @@
                     osc.start(now); osc.stop(now + 0.3);
                 }
             };
-            return { play };
+            return { play, toggleBrownNoise };
         })();
 
         class ErrorBoundary extends React.Component {
@@ -494,7 +556,6 @@
             const execCmd = (cmd) => { document.execCommand(cmd, false, null); };
             const execBlock = (tag) => { document.execCommand('formatBlock', false, tag); };
 
-            // INTERCEPTA O EVENTO DE COLAR (PASTE) E OBRIGA A SER TEXTO PURO
             const handlePaste = (e) => {
                 e.preventDefault();
                 const text = (e.originalEvent || e).clipboardData.getData('text/plain');
@@ -509,7 +570,6 @@
                         <button type="button" onClick={() => execCmd('insertUnorderedList')} className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Lista"><List size={16}/></button>
                         <button type="button" onClick={() => execBlock('pre')} className="p-1.5 hover:bg-slate-700 rounded text-purple-400" title="Inserir Código (Bloco)"><Code size={16}/></button>
                     </div>
-                    {/* Evento onPaste adicionado aqui na div editável */}
                     <div ref={editorRef} className="flex-1 p-4 text-white focus:outline-none overflow-y-auto custom-scrollbar prose text-sm prose-left" contentEditable onInput={(e) => onChange(e.currentTarget.innerHTML)} onPaste={handlePaste}></div>
                 </div>
             );
@@ -1151,9 +1211,6 @@
             );
         };
 
-        // ============================================================================
-        // ABOUT VIEW - PÁGINA SOBRE O SITE / EMENTAS / DIRETRIZES
-        // ============================================================================
         const AboutView = ({ content, isAdmin, onSave }) => {
             const [isEditing, setIsEditing] = React.useState(false);
             const [editContent, setEditContent] = React.useState(content);
@@ -1245,13 +1302,9 @@
             );
         };
 
-        // ============================================================================
-        // ADMIN PANEL
-        // ============================================================================
         const AdminPanel = ({ cards, quizzes, onExit, siteSettings }) => {
             const [adminTab, setAdminTab] = React.useState('flashcards');
 
-            // --- ESTADOS FLASHCARDS ---
             const [form, setForm] = React.useState({ front: '', back: '', category: 'Geral', lesson: 'Conteúdo Geral', subcategory: '', tags: [] });
             const [tagInput, setTagInput] = React.useState('');
             const [editingId, setEditingId] = React.useState(null);
@@ -1269,11 +1322,9 @@
             const [bulkTagRemoveInput, setBulkTagRemoveInput] = React.useState('');
             const [isBulkProcessing, setIsBulkProcessing] = React.useState(false);
 
-            // --- ESTADOS SIMULADOS ---
             const [quizForm, setQuizForm] = React.useState({ question: '', options: ['', '', '', '', ''], correctIndex: 0, category: 'Sistemas Operacionais', tags: [], questionNumber: '' });
             const [quizEditingId, setQuizEditingId] = React.useState(null);
 
-            // --- ESTADOS CONFIGURAÇÕES DO SITE ---
             const [settingsForm, setSettingsForm] = React.useState({ title: '', favicon: '' });
             const [isSavingSettings, setIsSavingSettings] = React.useState(false);
 
@@ -1291,7 +1342,6 @@
             const existingSubcategories = [...new Set([...cards, ...quizzes].map(c => normalize(c.subcategory || 'Geral')))].filter(Boolean).sort();
             const existingAdminTags = [...new Set([...cards, ...quizzes].flatMap(c => c.tags || []))].filter(Boolean).sort();
 
-            // --- LÓGICA FILTROS (Misto para as duas abas principais) ---
             const filterList = (list) => list.filter(c => {
                 const cCat = normalize(c.category).toLowerCase();
                 const cLess = normalize(c.lesson || 'Conteúdo Geral').toLowerCase();
@@ -1318,7 +1368,6 @@
                 return numA - numB;
             });
 
-            // --- LÓGICA FLASHCARDS (INALTERADA) ---
             const allFilteredSelected = filteredCards.length > 0 && filteredCards.every(c => selectedCardIds.has(c.id));
             const handleToggleSelection = (id) => {
                 const newSelection = new Set(selectedCardIds);
@@ -1451,7 +1500,6 @@
                 if(confirm("Deletar este card de forma irreversível?")) await deleteDoc(doc(db, "cards", id)); 
             };
 
-            // --- LÓGICA SIMULADOS ---
             const handleQuizOptionChange = (index, value) => {
                 const newOptions = [...quizForm.options];
                 newOptions[index] = value;
@@ -1507,7 +1555,6 @@
                 if(confirm("Deletar esta questão de simulado irreversivelmente?")) await deleteDoc(doc(db, "exams", id)); 
             };
 
-            // --- LÓGICA CONFIGURAÇÕES GLOBAIS ---
             const handleSaveSiteSettings = async (e) => {
                 e.preventDefault();
                 setIsSavingSettings(true);
@@ -1523,7 +1570,6 @@
             return (
                 <div className="glass p-6 rounded-2xl border border-slate-700 min-h-screen md:h-[calc(100vh-100px)] flex flex-col shadow-2xl animate-fade-in">
                     
-                    {/* CABEÇALHO UNIFICADO COM ABAS */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-slate-700 pb-4 flex-shrink-0 gap-4">
                         <div className="flex items-center gap-3">
                             <Lock size={20} className="text-amber-500"/>
@@ -1533,7 +1579,6 @@
                             </div>
                         </div>
 
-                        {/* TABS DE ADMINISTRAÇÃO */}
                         <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800 self-start md:self-auto overflow-x-auto max-w-full">
                             <button onClick={() => setAdminTab('flashcards')} className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap ${adminTab === 'flashcards' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                                 <Layers size={16}/> Flashcards
@@ -1551,7 +1596,6 @@
 
                     <div className="flex-1 overflow-hidden flex flex-col">
                         
-                        {/* VIEW DA ABA DE CONFIGURAÇÕES GLOBAIS DO SITE */}
                         {adminTab === 'site_settings' ? (
                             <div className="flex items-center justify-center h-full w-full">
                                 <form onSubmit={handleSaveSiteSettings} className="w-full max-w-2xl bg-slate-900/50 p-8 rounded-2xl border border-slate-700 shadow-2xl animate-slide-up flex flex-col">
@@ -1588,7 +1632,6 @@
                                             <p className="text-[10px] text-slate-500 ml-1">Insira uma URL de imagem válida (PNG, ICO, SVG ou JPG). Esta imagem substituirá o ícone do cérebro no login.</p>
                                         </div>
                                         
-                                        {/* Preview Area */}
                                         <div className="mt-8 p-4 bg-slate-950 rounded-xl border border-slate-800 flex items-center gap-4">
                                             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest min-w-max">Preview Atual:</span>
                                             <div className="flex items-center gap-2 bg-slate-900 px-4 py-2 rounded-lg border border-slate-800 truncate max-w-full">
@@ -1609,10 +1652,8 @@
                                 </form>
                             </div>
                         ) : (
-                            /* VIEW ORIGINAL (FLASHCARDS E SIMULADOS COM DUAS COLUNAS) */
                             <div className="flex flex-col md:flex-row gap-6 flex-1 overflow-hidden h-full">
                                 
-                                {/* COLUNA ESQUERDA: LISTAGEM E FILTROS */}
                                 <div className="w-full md:w-[45%] lg:w-1/3 flex flex-col border-b md:border-b-0 md:border-r border-slate-700/50 pb-4 md:pr-4 h-64 md:h-full">
                                     
                                     <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 mb-3 flex-shrink-0 space-y-3">
@@ -1654,7 +1695,6 @@
                                         </div>
                                     </div>
 
-                                    {/* LISTA DE ITENS */}
                                     <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                                         {adminTab === 'flashcards' ? (
                                             <>
@@ -1708,11 +1748,9 @@
                                     </div>
                                 </div>
 
-                                {/* COLUNA DIREITA: FORMULÁRIOS (FLASHCARDS/SIMULADOS) */}
                                 <div className="flex-1 overflow-y-auto pl-0 md:pl-2 custom-scrollbar pb-20 md:pb-0 h-full">
                                     
                                     {adminTab === 'flashcards' && selectedCardIds.size > 0 && (
-                                        /* --- MODO EDIÇÃO EM MASSA (LOTE) PARA FLASHCARDS --- */
                                         <form onSubmit={handleBulkSubmit} className="space-y-4 bg-amber-900/10 border border-amber-500/30 p-4 rounded-xl h-full flex flex-col relative overflow-hidden">
                                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
                                             
@@ -1745,7 +1783,6 @@
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
-                                                {/* ADICIONAR TAGS LOTE */}
                                                 <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50 flex flex-col">
                                                     <label className="text-xs font-bold text-emerald-400 uppercase ml-1 mb-2 flex items-center gap-1"><Plus size={14}/> Acoplar Novas Tags</label>
                                                     <div className="flex flex-wrap gap-2 mb-2">
@@ -1758,7 +1795,6 @@
                                                     <input type="text" className="w-full bg-slate-900 p-3 rounded-lg text-white border border-slate-700 focus:border-emerald-500 outline-none font-mono text-sm mt-auto placeholder:text-slate-600" placeholder="Ex: revisar (Enter)" value={bulkTagAddInput} onChange={e => setBulkTagAddInput(e.target.value)} onKeyDown={handleAddBulkTagAdd} />
                                                 </div>
 
-                                                {/* REMOVER TAGS LOTE */}
                                                 <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50 flex flex-col">
                                                     <label className="text-xs font-bold text-red-400 uppercase ml-1 mb-2 flex items-center gap-1"><Trash2 size={14}/> Remover Tags</label>
                                                     <div className="flex flex-wrap gap-2 mb-2">
@@ -1782,7 +1818,6 @@
                                     )}
 
                                     {adminTab === 'flashcards' && selectedCardIds.size === 0 && (
-                                        /* --- MODO CRIAÇÃO/EDIÇÃO ÚNICA (FLASHCARDS) --- */
                                         <form onSubmit={handleSaveCard} className="space-y-4 bg-slate-900/20 p-2 rounded-xl h-full flex flex-col animate-fade-in">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <Pencil size={18} className="text-blue-500"/>
@@ -1833,7 +1868,6 @@
                                     )}
 
                                     {adminTab === 'quizzes' && (
-                                        /* --- MODO CRIAÇÃO/EDIÇÃO ÚNICA (SIMULADOS) FOCADO E LIMPO --- */
                                         <form onSubmit={handleSaveQuiz} className="space-y-4 bg-slate-900/20 p-2 rounded-xl h-full flex flex-col animate-fade-in">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <ListTodo size={18} className="text-purple-500"/>
@@ -1869,7 +1903,6 @@
                                                 </div>
                                             </div>
 
-                                            {/* Alternativas */}
                                             <div className="flex-shrink-0 space-y-3 bg-slate-900/30 p-4 rounded-xl border border-slate-700/50">
                                                 <label className="text-xs font-bold text-slate-400 uppercase ml-1 flex items-center gap-2"><HelpCircle size={14}/> Alternativas (Padrão Anhanguera - 1 Correta)</label>
                                                 <p className="text-[10px] text-slate-500 ml-1 -mt-2 mb-2">Preencha as alternativas e marque o círculo verde na única opção que representa o gabarito.</p>
@@ -1905,12 +1938,8 @@
             );
         };
 
-        // ============================================================================
-        // QUIZ DASHBOARD (ALUNO) - LISTAGEM PARA COMEÇAR SIMULADO
-        // ============================================================================
         const QuizDashboard = ({ quizzes, onStartQuiz }) => {
             
-            // Agrupar quizzes por categoria usando Lowercase como chave para evitar duplicatas case-sensitive
             const categoriesMap = {};
             quizzes.forEach(q => {
                 const rawCat = q.category || 'Geral';
@@ -1964,9 +1993,6 @@
             )
         };
 
-        // ============================================================================
-        // QUIZ SESSION (ALUNO) - RESPONDENDO O SIMULADO
-        // ============================================================================
         const QuizSession = ({ queue, onFinish }) => {
             const [index, setIndex] = React.useState(0);
             const [selectedOption, setSelectedOption] = React.useState(null);
@@ -2004,7 +2030,7 @@
             const progress = ((index) / queue.length) * 100;
 
             const handleSelect = (optIndex) => {
-                if (showExplanation) return; // Block clicking again
+                if (showExplanation) return; 
                 setSelectedOption(optIndex);
                 setShowExplanation(true);
                 
@@ -2046,19 +2072,17 @@
 
                     <div className="glass flex-1 rounded-3xl border border-slate-700 p-6 md:p-10 flex flex-col shadow-2xl bg-slate-900">
                         
-                        {/* Enunciado (Alinhamento centralizado similar aos flashcards) */}
                         <div className="mb-8 w-full">
                             <div className="prose prose-invert prose-lg font-medium text-white select-text w-full max-w-none leading-relaxed break-words text-center flex flex-col items-center justify-center" dangerouslySetInnerHTML={{__html: currentQuestion.question || currentQuestion.text}}></div>
                         </div>
 
-                        {/* Alternativas (Aparência limpa e contida) */}
                         <div className="space-y-3 mt-auto">
                             {validOptions.map((opt, idx) => {
                                 let stateClass = "bg-slate-800/50 border-slate-700 hover:bg-slate-800 hover:border-slate-500 text-slate-300 cursor-pointer";
                                 let icon = <span className="font-bold text-slate-500 w-6 text-center shrink-0">{String.fromCharCode(65 + idx)}</span>;
 
                                 if (showExplanation) {
-                                    stateClass = "bg-slate-900 border-slate-800 text-slate-500 opacity-60 cursor-default"; // Default post-answer state
+                                    stateClass = "bg-slate-900 border-slate-800 text-slate-500 opacity-60 cursor-default"; 
                                     
                                     if (idx === currentQuestion.correctIndex) {
                                         stateClass = "bg-emerald-900/30 border-emerald-500/50 text-emerald-100 shadow-[0_0_15px_rgba(16,185,129,0.1)] z-10 scale-[1.02] transform transition-transform";
@@ -2082,7 +2106,6 @@
                             })}
                         </div>
 
-                        {/* Ação */}
                         <div className={`mt-8 transition-all duration-500 flex justify-end ${showExplanation ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
                             <button onClick={handleNext} className="bg-purple-600 hover:bg-purple-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-purple-900/20 flex items-center gap-2">
                                 {index < queue.length - 1 ? 'Próxima Questão' : 'Ver Resultados'} <ChevronRight size={18}/>
@@ -2103,7 +2126,6 @@
             const [reviews, setReviews] = React.useState({});
             const [userStats, setUserStats] = React.useState(null);
             
-            // --- NOVO ESTADO: CONFIGURAÇÕES GLOBAIS E SOBRE ---
             const [siteSettings, setSiteSettings] = React.useState({ title: '', favicon: '' });
             const [aboutContent, setAboutContent] = React.useState("");
             
@@ -2111,6 +2133,9 @@
             const [quizQueue, setQuizQueue] = React.useState([]);
             const [customStudyOpen, setCustomStudyOpen] = React.useState(false);
             const [settingsOpen, setSettingsOpen] = React.useState(false);
+
+            // Controle Global do Ruído Marrom
+            const [isNoiseActive, setIsNoiseActive] = React.useState(false);
             
             React.useEffect(() => {
                 const unsubAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -2123,31 +2148,32 @@
                         setUserStats(null);
                         setCards([]); 
                         setQuizzes([]);
+                        // Desliga o áudio automaticamente se fizer logout
+                        if (isNoiseActive) {
+                            setIsNoiseActive(false);
+                            AudioEngine.toggleBrownNoise(false);
+                        }
                     }
                     setView(currentUser ? "decks" : "auth");
                 });
 
                 return () => unsubAuth();
-            }, []);
+            }, [isNoiseActive]);
 
-            // --- BUSCAR CONFIGURAÇÕES GLOBAIS E SOBRE DA COLEÇÃO ---
             React.useEffect(() => {
-                if (!user) return; // Evita erro de permissão (Missing permissions) antes do login
+                if (!user) return;
 
-                // Configurações Globais (Título e Ícone)
                 const unsubSettings = onSnapshot(doc(db, "site_config", "global"), (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         setSiteSettings(data);
                         
-                        // Aplica o título em tempo real
                         if (data.title) {
                             document.title = data.title + " - v2.0";
                         } else {
                             document.title = "Nosso Site - v2.0";
                         }
 
-                        // Aplica o Favicon em tempo real injetando a tag no <head>
                         if (data.favicon) {
                             let link = document.querySelector("link[rel~='icon']");
                             if (!link) {
@@ -2162,7 +2188,6 @@
                     }
                 }, (error) => console.error("Erro site_config onSnapshot:", error));
 
-                // Conteúdo da página Sobre
                 const unsubAbout = onSnapshot(doc(db, "site_config", "about"), (docSnap) => {
                     if (docSnap.exists()) {
                         setAboutContent(docSnap.data().content || "");
@@ -2177,7 +2202,6 @@
             React.useEffect(() => {
                 if (!user) return; 
 
-                // 1. Fetch Flashcards
                 const qCards = query(collection(db, "cards"));
                 const unsubCards = onSnapshot(qCards, (snapshot) => {
                     const loadedCards = snapshot.docs.map(doc => {
@@ -2191,7 +2215,6 @@
                     setCards(loadedCards);
                 }, (error) => console.error("Erro cards onSnapshot:", error));
 
-                // 2. Fetch Quizzes (Puxando da coleção 'exams')
                 const qQuizzes = query(collection(db, "exams"));
                 const unsubQuizzes = onSnapshot(qQuizzes, (snapshot) => {
                     const loadedQuizzes = snapshot.docs.map(doc => {
@@ -2207,7 +2230,6 @@
                     setQuizzes(loadedQuizzes);
                 }, (error) => console.error("Erro quizzes onSnapshot:", error));
 
-                // 3. Fetch Reviews
                 const qReviews = query(collection(db, `users/${user.uid}/reviews`));
                 const unsubReviews = onSnapshot(qReviews, (snapshot) => {
                     const userReviews = {};
@@ -2215,7 +2237,6 @@
                     setReviews(userReviews);
                 }, (error) => console.error("Erro reviews onSnapshot:", error));
                 
-                // 4. Fetch User Stats
                 const statsRef = doc(db, 'leaderboard', user.uid);
                 const unsubStats = onSnapshot(statsRef, async (docSnap) => {
                     if (!docSnap.exists()) {
@@ -2395,9 +2416,25 @@
                             </div>
                             <div className="flex items-center gap-2 md:gap-4 overflow-x-auto custom-scrollbar">
                                 <button onClick={() => setView("quizzes")} className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'quizzes' || view === 'quiz_session' ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-slate-900 text-slate-400 hover:text-purple-400 border-slate-800 hover:bg-slate-800'}`}><ListTodo size={14} /> Simulados</button>
+                                
+                                {/* BOTÃO: Ruído Marrom para Foco */}
+                                {user && (
+                                    <button 
+                                        onClick={() => {
+                                            const newState = !isNoiseActive;
+                                            setIsNoiseActive(newState);
+                                            AudioEngine.toggleBrownNoise(newState);
+                                        }} 
+                                        className={`flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${isNoiseActive ? 'bg-orange-500/20 text-orange-400 border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.2)]' : 'bg-slate-900 text-slate-400 hover:text-orange-400 border-slate-800 hover:bg-slate-800'}`}
+                                        title="Ligar/Desligar Isolamento Acústico (Ruído Marrom)"
+                                    >
+                                        <Headphones size={14} className={isNoiseActive ? 'animate-pulse' : ''} /> 
+                                        <span className="hidden md:inline">{isNoiseActive ? 'Foco Ativo' : 'Foco Acústico'}</span>
+                                    </button>
+                                )}
+
                                 {user && <button onClick={() => setView("leaderboard")} className={`hidden md:flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'leaderboard' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-yellow-400 hover:bg-slate-800'}`}><Trophy size={14} /> Ranking Diário</button>}
                                 
-                                {/* NOVO BOTÃO DA ABA SOBRE */}
                                 <button onClick={() => setView("about")} className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'about' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-blue-400 hover:bg-slate-800'}`}><Info size={14} /> Sobre</button>
 
                                 {isAdmin && <button onClick={() => setView("admin")} className="text-amber-500 hover:text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20 transition-all flex items-center gap-1.5 text-sm"><Lock size={14} /> Admin</button>}
@@ -2408,7 +2445,6 @@
                     </nav>
 
                     <main className="flex-1 max-w-6xl mx-auto w-full p-4 relative">
-                        {/* VIEW: DECKS FLASHCARDS */}
                         {view === "decks" && (
                             <div className="animate-fade-in space-y-6 flex flex-col min-h-[70vh]">
                                 <header className="border-b border-slate-800 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -2431,22 +2467,16 @@
                             </div>
                         )}
                         
-                        {/* VIEW: SESSÃO FLASHCARDS */}
                         {view === "study" && <StudySession initialQueue={studyQueue} user={user} reviews={reviews} setReviews={setReviews} userStats={userStats} setUserStats={setUserStats} onFinish={() => setView("decks")} />}
                         
-                        {/* VIEW: DASHBOARD SIMULADOS */}
                         {view === "quizzes" && <QuizDashboard quizzes={quizzes} onStartQuiz={handleStartQuiz} />}
 
-                        {/* VIEW: SESSÃO SIMULADOS */}
                         {view === "quiz_session" && <QuizSession queue={quizQueue} onFinish={() => setView("quizzes")} />}
 
-                        {/* VIEW: LEADERBOARD */}
                         {view === "leaderboard" && <LeaderboardView isAdmin={isAdmin} />}
                         
-                        {/* VIEW: SOBRE */}
                         {view === "about" && <AboutView content={aboutContent} isAdmin={isAdmin} onSave={handleSaveAboutContent} />}
 
-                        {/* VIEW: ADMIN */}
                         {view === "admin" && isAdmin && <AdminPanel cards={cards} quizzes={quizzes} onExit={() => setView("decks")} siteSettings={siteSettings} />}
                     </main>
                 </div>

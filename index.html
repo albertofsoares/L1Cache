@@ -519,7 +519,7 @@
                             </div>
 
                             <button onClick={handleSave} disabled={isSaving} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold p-3.5 rounded-xl shadow-lg shadow-blue-900/20 transition-all flex justify-center items-center gap-2">
-                                {isSaving ? <RotateCcw size={18} className="animate-spin" /> : <Save size={18}/>} 
+                                {isSaving ? <RotateCcw size={18} className="animate-spin" /> : <Save size={18}/>}
                                 {isSaving ? 'Gravando Alterações...' : 'Aplicar Neuromodulação'}
                             </button>
                         </div>
@@ -1251,7 +1251,7 @@
                         </div>
                     </div>
 
-                    <div className="glass rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50 overflow-x-auto">
+                    <div className="glass rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50 hidden md:block overflow-x-auto">
                         <table className="w-full text-left border-collapse min-w-[800px]">
                             <thead className="bg-slate-900/90 text-slate-400 uppercase text-[10px] md:text-xs font-bold tracking-wider">
                                 <tr>
@@ -1283,7 +1283,7 @@
                                         <td className="p-4 md:p-5 text-center text-slate-300 font-mono text-sm">{formatDuration(l.timeStudiedToday)}</td>
                                         <td className="p-4 md:p-5 text-center">
                                             <span className={`inline-flex items-center gap-1 font-mono font-bold ${l.currentStreak >= 3 ? 'text-orange-500' : 'text-slate-500'}`}>
-                                                {l.currentStreak > 0 && <Flame size={12} className={l.currentStreak >= 3 ? 'animate-pulse' : ''}/>} 
+                                                {l.currentStreak > 0 && <Flame size={12} className={l.currentStreak >= 3 ? 'animate-pulse' : ''}/>}
                                                 {l.currentStreak}
                                             </span>
                                         </td>
@@ -1305,6 +1305,53 @@
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+
+                    <div className="md:hidden space-y-3">
+                        {loading ? (
+                            <div className="glass rounded-2xl border border-slate-700/50 p-6 text-center text-slate-500">Sincronizando dados ao vivo...</div>
+                        ) : leaders.map((l, i) => (
+                            <div key={l.id} className={`glass rounded-2xl border border-slate-700/50 p-4 ${i === 0 ? 'ring-1 ring-yellow-500/40' : i === 1 ? 'ring-1 ring-slate-300/30' : i === 2 ? 'ring-1 ring-amber-500/30' : ''}`}>
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2 text-white font-semibold">
+                                        <span className="text-slate-400">#{i + 1}</span>
+                                        <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-400">
+                                            {l.email ? l.email.charAt(0).toUpperCase() : '?'}
+                                        </div>
+                                        <span className="truncate max-w-[140px]">{l.email ? l.email.split('@')[0] : 'Anônimo'}</span>
+                                    </div>
+                                    <span className={`inline-flex items-center gap-1 font-mono font-bold ${l.currentStreak >= 3 ? 'text-orange-500' : 'text-slate-500'}`}>
+                                        {l.currentStreak > 0 && <Flame size={12} className={l.currentStreak >= 3 ? 'animate-pulse' : ''}/>}
+                                        {l.currentStreak}
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div className="bg-slate-900/70 rounded-lg p-2 border border-slate-800">
+                                        <div className="text-slate-500">Hoje (Cards)</div>
+                                        <div className="text-blue-400 font-mono font-bold text-sm">{l.cardsSeenToday.toLocaleString('pt-BR')}</div>
+                                    </div>
+                                    <div className="bg-slate-900/70 rounded-lg p-2 border border-slate-800">
+                                        <div className="text-slate-500">Hoje (Tempo)</div>
+                                        <div className="text-slate-300 font-mono text-sm">{formatDuration(l.timeStudiedToday)}</div>
+                                    </div>
+                                    <div className="bg-slate-900/70 rounded-lg p-2 border border-slate-800">
+                                        <div className="text-slate-500">Retenção</div>
+                                        <div className="text-sm font-bold text-emerald-400">{l.retention ? l.retention.toFixed(1) : 0}%</div>
+                                    </div>
+                                    <div className="bg-slate-900/70 rounded-lg p-2 border border-slate-800">
+                                        <div className="text-slate-500">Últ. 31 dias</div>
+                                        <div className="text-slate-400 font-mono text-sm">{calculateLast31Days(l.dailyActivity).toLocaleString('pt-BR')}</div>
+                                    </div>
+                                </div>
+
+                                {isAdmin && (
+                                    <button onClick={() => handleDeleteUser(l.id, l.email)} className="mt-3 w-full text-slate-500 hover:text-red-500 p-2 rounded-lg hover:bg-red-500/10 transition-colors border border-slate-800" title="Deletar este usuário do ranking">
+                                        <span className="inline-flex items-center gap-2 text-sm"><Trash2 size={14} /> Remover do ranking</span>
+                                    </button>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 </div>
             );
@@ -2505,16 +2552,16 @@
             return (
                 <div className="min-h-screen flex flex-col bg-slate-950 text-slate-200 font-sans selection:bg-purple-500/30">
                     <nav className="border-b border-slate-800 bg-slate-950/80 sticky top-0 z-50 backdrop-blur-md">
-                        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-                            <div className="flex items-center gap-3 font-bold text-xl cursor-pointer group" onClick={() => setView("decks")}>
+                        <div className="max-w-6xl mx-auto px-3 sm:px-4 min-h-16 py-2 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 sm:gap-3 font-bold text-xl cursor-pointer group min-w-0" onClick={() => setView("decks")}>
                                 <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-2 rounded-lg shadow-lg shadow-blue-900/20 group-hover:scale-105 transition-transform flex items-center justify-center">
                                     <img src={siteSettings.favicon || "https://cdn-icons-png.flaticon.com/128/4696/4696916.png"} alt="Logo" className="w-5 h-5 object-contain" />
                                 </div>
-                                <span className="text-white tracking-tight hidden sm:block max-w-[200px] truncate">{displayTitle}</span>
-                                <span className="text-[10px] bg-slate-800 px-1 py-0.5 rounded text-blue-400 align-top border border-blue-500/30">v2.0</span>
+                                <span className="text-white tracking-tight text-sm sm:text-base md:text-lg max-w-[120px] sm:max-w-[200px] truncate">{displayTitle}</span>
+                                <span className="hidden sm:inline text-[10px] bg-slate-800 px-1 py-0.5 rounded text-blue-400 align-top border border-blue-500/30">v2.0</span>
                             </div>
-                            <div className="flex items-center gap-2 md:gap-4 overflow-x-auto custom-scrollbar">
-                                <button onClick={() => setView("quizzes")} className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'quizzes' || view === 'quiz_session' ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-slate-900 text-slate-400 hover:text-purple-400 border-slate-800 hover:bg-slate-800'}`}><ListTodo size={14} /> Simulados</button>
+                            <div className="flex items-center gap-2 md:gap-4 overflow-x-auto custom-scrollbar max-w-[58vw] sm:max-w-none">
+                                <button onClick={() => setView("quizzes")} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'quizzes' || view === 'quiz_session' ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-slate-900 text-slate-400 hover:text-purple-400 border-slate-800 hover:bg-slate-800'}`}><ListTodo size={14} /> Simulados</button>
                                 
                                 {/* BOTÃO: Ruído Marrom para Foco */}
                                 {user && (
@@ -2524,7 +2571,7 @@
                                             setIsNoiseActive(newState);
                                             AudioEngine.toggleBrownNoise(newState);
                                         }} 
-                                        className={`flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${isNoiseActive ? 'bg-orange-500/20 text-orange-400 border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.2)]' : 'bg-slate-900 text-slate-400 hover:text-orange-400 border-slate-800 hover:bg-slate-800'}`}
+                                        className={`flex items-center gap-1.5 text-xs sm:text-sm font-bold px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${isNoiseActive ? 'bg-orange-500/20 text-orange-400 border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.2)]' : 'bg-slate-900 text-slate-400 hover:text-orange-400 border-slate-800 hover:bg-slate-800'}`}
                                         title="Ligar/Desligar Isolamento Acústico (Ruído Marrom)"
                                     >
                                         <Headphones size={14} className={isNoiseActive ? 'animate-pulse' : ''} /> 
@@ -2532,9 +2579,9 @@
                                     </button>
                                 )}
 
-                                {user && <button onClick={() => setView("leaderboard")} className={`hidden md:flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'leaderboard' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-yellow-400 hover:bg-slate-800'}`}><Trophy size={14} /> Ranking Diário</button>}
+                                {user && <button onClick={() => setView("leaderboard")} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'leaderboard' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-yellow-400 hover:bg-slate-800'}`}><Trophy size={14} /> <span className="hidden sm:inline">Ranking Diário</span><span className="sm:hidden">Ranking</span></button>}
                                 
-                                <button onClick={() => setView("about")} className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'about' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-blue-400 hover:bg-slate-800'}`}><Info size={14} /> Sobre</button>
+                                <button onClick={() => setView("about")} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'about' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-blue-400 hover:bg-slate-800'}`}><Info size={14} /> Sobre</button>
 
                                 {isAdmin && <button onClick={() => setView("admin")} className="text-amber-500 hover:text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20 transition-all flex items-center gap-1.5 text-sm"><Lock size={14} /> Admin</button>}
                                 {user && <button onClick={() => setSettingsOpen(true)} className="text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800" title="Configurações (Engine)"><Settings size={20}/></button>}

@@ -839,6 +839,8 @@
                     }
 
                     updatedStats.retention = (updatedStats.correctAnswers / updatedStats.cardsSeen) * 100;
+                    updatedStats.maxStreak = Math.max(updatedStats.maxStreak || 0, updatedStats.currentStreak || 0);
+                    updatedStats.maxRetention = Math.max(updatedStats.maxRetention || 0, updatedStats.retention || 0);
 
                     updatedStats.dailyActivity = updatedStats.dailyActivity || {};
                     updatedStats.dailyActivity[todayStr] = (updatedStats.dailyActivity[todayStr] || 0) + 1;
@@ -1184,6 +1186,10 @@
         const LeaderboardView = ({ isAdmin }) => {
             const [leaders, setLeaders] = React.useState([]);
             const [loading, setLoading] = React.useState(true);
+            const [activeTab, setActiveTab] = React.useState('daily');
+
+            const getMonthFromDate = (dateObj = new Date()) => `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+            const getDateMonth = (dateStr = '') => dateStr.slice(0, 7);
 
             const calculateLast31Days = (dailyActivity) => {
                 if (!dailyActivity) return 0;
@@ -1193,11 +1199,18 @@
                     const targetDate = new Date(today);
                     targetDate.setDate(targetDate.getDate() - i);
                     const dateStr = getLocalDateString(targetDate);
-                    if (dailyActivity[dateStr]) {
-                        total += dailyActivity[dateStr];
-                    }
+                    if (dailyActivity[dateStr]) total += dailyActivity[dateStr];
                 }
                 return total;
+            };
+
+            const calculateCurrentMonthTotal = (dataMap) => {
+                if (!dataMap) return 0;
+                const currentMonth = getMonthFromDate();
+                return Object.entries(dataMap).reduce((acc, [dateStr, value]) => {
+                    if (getDateMonth(dateStr) === currentMonth) return acc + (value || 0);
+                    return acc;
+                }, 0);
             };
 
             const handleDeleteUser = async (userId, userEmail) => {
@@ -1218,27 +1231,35 @@
 
                     const fetchedLeaders = snap.docs.map(d => {
                         const data = d.data();
-
                         const cardsSeenToday = (data.dailyActivity && data.dailyActivity[todayStr]) || 0;
                         const timeStudiedToday = (data.dailyTime && data.dailyTime[todayStr]) || 0;
                         const correctToday = (data.dailyCorrect && data.dailyCorrect[todayStr]) || 0;
-
                         const dailyRetention = cardsSeenToday > 0 ? (correctToday / cardsSeenToday) * 100 : 0;
+                        const monthlyCards = calculateCurrentMonthTotal(data.dailyActivity || {});
+                        const monthlyTime = calculateCurrentMonthTotal(data.dailyTime || {});
+                        const monthlyCorrect = calculateCurrentMonthTotal(data.dailyCorrect || {});
+                        const monthlyRetention = monthlyCards > 0 ? (monthlyCorrect / monthlyCards) * 100 : 0;
 
                         return {
                             id: d.id,
                             email: data.email,
                             ...data,
-                            cardsSeenToday: cardsSeenToday,
-                            timeStudiedToday: timeStudiedToday,
+                            cardsSeenToday,
+                            timeStudiedToday,
                             retention: cardsSeenToday > 0 ? dailyRetention : (data.retention || 0),
                             currentStreak: data.currentStreak || 0,
+                            maxStreak: data.maxStreak || 0,
+                            maxRetention: data.maxRetention || 0,
                             dailyActivity: data.dailyActivity || {},
-                            dailyTime: data.dailyTime || {}
+                            dailyTime: data.dailyTime || {},
+                            monthlyCards,
+                            monthlyTime,
+                            monthlyRetention,
+                            quizStats: data.quizStats || { totalExamTime: 0, questionsSeen: 0, correctAnswers: 0, examsTaken: 0 }
                         };
                     }).filter(u => u.email && u.email !== 'Anônimo' && u.email.includes('@'));
 
-                    setLeaders(fetchedLeaders.sort((a,b) => (b.cardsSeenToday - a.cardsSeenToday) || (b.retention - a.retention)).slice(0, 50));
+                    setLeaders(fetchedLeaders);
                     setLoading(false);
                 }, (error) => {
                     console.error("Erro Leaderboard onSnapshot:", error);
@@ -1248,123 +1269,110 @@
                 return () => unsub();
             }, []);
 
+            const sortedDaily = [...leaders].sort((a,b) => (b.cardsSeenToday - a.cardsSeenToday) || (b.retention - a.retention)).slice(0, 50);
+            const sortedMonthly = [...leaders].sort((a,b) => (b.monthlyCards - a.monthlyCards) || (b.monthlyRetention - a.monthlyRetention)).slice(0, 50);
+            const sortedQuizzes = [...leaders].sort((a,b) => (b.quizStats?.correctAnswers || 0) - (a.quizStats?.correctAnswers || 0) || (b.quizStats?.questionsSeen || 0) - (a.quizStats?.questionsSeen || 0)).slice(0, 50);
+
             return (
-                <div className="max-w-5xl mx-auto animate-fade-in">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 p-6 glass rounded-2xl border border-slate-700/50">
-                        <div className="flex items-center gap-4">
-                            <div className="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative">
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
-                                <Trophy className="text-yellow-500" size={32}/>
-                            </div>
-                            <div>
-                                <h2 className="text-3xl font-bold text-white tracking-tight">Leaderboard Diário <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full uppercase ml-2 align-middle shadow-[0_0_10px_rgba(239,68,68,0.5)]">Ao Vivo</span></h2>
-                                <p className="text-slate-400 text-sm mt-1">Ranking atualizado em tempo real baseado no volume e retenção **exclusivos de hoje**.</p>
-                            </div>
+                <div className="max-w-7xl mx-auto animate-fade-in pb-12">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+                        <div>
+                            <h2 className="text-3xl font-bold text-white flex items-center gap-3"><Trophy className="text-yellow-500" /> Ranking</h2>
+                            <p className="text-slate-400 text-sm mt-1">Acompanhe desempenho diário, mensal e estatísticas de simulados em tempo real.</p>
+                        </div>
+                        <div className="inline-flex rounded-xl border border-slate-700 bg-slate-900/70 p-1 text-xs sm:text-sm">
+                            <button onClick={() => setActiveTab('daily')} className={`px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'daily' ? 'bg-yellow-500/20 text-yellow-400' : 'text-slate-400 hover:text-yellow-300'}`}>Ranking Diário</button>
+                            <button onClick={() => setActiveTab('monthly')} className={`px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'monthly' ? 'bg-blue-500/20 text-blue-400' : 'text-slate-400 hover:text-blue-300'}`}>Ranking Mensal</button>
+                            <button onClick={() => setActiveTab('simulados')} className={`px-3 py-2 rounded-lg font-semibold transition-colors ${activeTab === 'simulados' ? 'bg-purple-500/20 text-purple-400' : 'text-slate-400 hover:text-purple-300'}`}>Ranking de Simulados</button>
                         </div>
                     </div>
 
-                    <div className="glass rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50 hidden md:block overflow-x-auto">
-                        <table className="w-full text-left border-collapse min-w-[800px]">
-                            <thead className="bg-slate-900/90 text-slate-400 uppercase text-[10px] md:text-xs font-bold tracking-wider">
-                                <tr>
-                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center w-16">Rank</th>
-                                    <th className="p-4 md:p-5 border-b border-slate-800">Estudante</th>
-                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center" title="Cards revisados apenas HOJE"><div className="flex items-center justify-center gap-1"><Layers size={14}/> Hoje (Cards)</div></th>
-                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center" title="Tempo estudado apenas HOJE"><div className="flex items-center justify-center gap-1"><Clock size={14}/> Hoje (Tempo)</div></th>
-                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center" title="Streak da sessão diária"><div className="flex items-center justify-center gap-1 text-orange-500"><Flame size={14}/> Streak</div></th>
-                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center" title="Retenção exclusiva do dia de hoje"><div className="flex items-center justify-center gap-1"><Target size={14}/> Retenção (Diária)</div></th>
-                                    <th className="p-4 md:p-5 border-b border-slate-800 text-center" title="Cards revisados nos últimos 31 dias"><div className="flex items-center justify-center gap-1 text-slate-500"><TrendingUp size={14}/> Últ. 31 Dias (Volume)</div></th>
-                                    {isAdmin && <th className="p-4 md:p-5 border-b border-slate-800 text-center text-red-500">Admin</th>}
-                                </tr>
+                    <div className="overflow-x-auto rounded-2xl border border-slate-700/50 bg-slate-950/70">
+                        <table className="w-full text-sm text-left min-w-[900px]">
+                            <thead className="bg-slate-900/90 text-slate-400 text-xs uppercase tracking-wider">
+                                {activeTab === 'daily' && (
+                                    <tr>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center w-16">Rank</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800">Estudante</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Hoje (Cards)</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Hoje (Tempo)</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Streak</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Retenção (Diária)</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Últ. 31 Dias</th>
+                                        {isAdmin && <th className="p-4 md:p-5 border-b border-slate-800 text-center text-red-500">Admin</th>}
+                                    </tr>
+                                )}
+                                {activeTab === 'monthly' && (
+                                    <tr>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center w-16">Rank</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800">Nome</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Total de Cards (Mês)</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Tempo Total (Mês)</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Streaks Totais (Máx.)</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Retenção Máxima</th>
+                                        {isAdmin && <th className="p-4 md:p-5 border-b border-slate-800 text-center text-red-500">Admin</th>}
+                                    </tr>
+                                )}
+                                {activeTab === 'simulados' && (
+                                    <tr>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center w-16">Rank</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800">Nome</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Tempo Total de Prova</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Questões Vistas</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Acertos</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Vezes que Fez</th>
+                                        <th className="p-4 md:p-5 border-b border-slate-800 text-center">Aproveitamento</th>
+                                        {isAdmin && <th className="p-4 md:p-5 border-b border-slate-800 text-center text-red-500">Admin</th>}
+                                    </tr>
+                                )}
                             </thead>
-                            <tbody className="divide-y divide-slate-800/50 transition-all">
-                                {loading ? (
-                                    <tr><td colSpan={isAdmin ? "8" : "7"} className="p-8 text-center text-slate-500">Sincronizando dados ao vivo...</td></tr>
-                                ) : leaders.map((l, i) => (
-                                    <tr key={l.id} className={`transition-colors hover:bg-slate-800/40 ${i === 0 ? 'bg-yellow-500/5' : i === 1 ? 'bg-slate-400/5' : i === 2 ? 'bg-amber-700/5' : ''}`}>
-                                        <td className="p-4 md:p-5 text-center font-bold text-slate-500 font-mono text-lg">
-                                            {i === 0 ? <span className="text-yellow-500">1</span> : i === 1 ? <span className="text-slate-300">2</span> : i === 2 ? <span className="text-amber-600">3</span> : i+1}
-                                        </td>
-                                        <td className="p-4 md:p-5 text-white font-medium flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-400">
-                                                {l.email ? l.email.charAt(0).toUpperCase() : '?'}
-                                            </div>
-                                            {l.email ? l.email.split('@')[0] : 'Anônimo'}
-                                        </td>
+                            <tbody className="divide-y divide-slate-800/50">
+                                {loading && <tr><td colSpan={isAdmin ? "8" : "7"} className="p-8 text-center text-slate-500">Sincronizando dados ao vivo...</td></tr>}
+
+                                {!loading && activeTab === 'daily' && sortedDaily.map((l, i) => (
+                                    <tr key={l.id} className="transition-colors hover:bg-slate-800/40">
+                                        <td className="p-4 md:p-5 text-center font-bold text-slate-400">{i + 1}</td>
+                                        <td className="p-4 md:p-5 text-white font-medium">{l.email ? l.email.split('@')[0] : 'Anônimo'}</td>
                                         <td className="p-4 md:p-5 text-center text-blue-400 font-mono font-bold">{l.cardsSeenToday.toLocaleString('pt-BR')}</td>
                                         <td className="p-4 md:p-5 text-center text-slate-300 font-mono text-sm">{formatDuration(l.timeStudiedToday)}</td>
-                                        <td className="p-4 md:p-5 text-center">
-                                            <span className={`inline-flex items-center gap-1 font-mono font-bold ${l.currentStreak >= 3 ? 'text-orange-500' : 'text-slate-500'}`}>
-                                                {l.currentStreak > 0 && <Flame size={12} className={l.currentStreak >= 3 ? 'animate-pulse' : ''}/>}
-                                                {l.currentStreak}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 md:p-5 text-center">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold border inline-block min-w-[60px] ${l.retention > 80 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' : l.retention > 50 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                                                {l.retention ? l.retention.toFixed(1) : 0}%
-                                            </span>
-                                        </td>
+                                        <td className="p-4 md:p-5 text-center text-orange-400 font-bold">{l.currentStreak}</td>
+                                        <td className="p-4 md:p-5 text-center text-emerald-400 font-bold">{l.retention ? l.retention.toFixed(1) : 0}%</td>
                                         <td className="p-4 md:p-5 text-center text-slate-400 font-mono text-sm">{calculateLast31Days(l.dailyActivity).toLocaleString('pt-BR')}</td>
-
-                                        {isAdmin && (
-                                            <td className="p-4 md:p-5 text-center">
-                                                <button onClick={() => handleDeleteUser(l.id, l.email)} className="text-slate-500 hover:text-red-500 p-2 rounded hover:bg-red-500/10 transition-colors" title="Deletar este usuário do ranking">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </td>
-                                        )}
+                                        {isAdmin && <td className="p-4 md:p-5 text-center"><button onClick={() => handleDeleteUser(l.id, l.email)} className="text-slate-500 hover:text-red-500"><Trash2 size={16} /></button></td>}
                                     </tr>
                                 ))}
+
+                                {!loading && activeTab === 'monthly' && sortedMonthly.map((l, i) => (
+                                    <tr key={l.id} className="transition-colors hover:bg-slate-800/40">
+                                        <td className="p-4 md:p-5 text-center font-bold text-slate-400">{i + 1}</td>
+                                        <td className="p-4 md:p-5 text-white font-medium">{l.email ? l.email.split('@')[0] : 'Anônimo'}</td>
+                                        <td className="p-4 md:p-5 text-center text-blue-400 font-mono font-bold">{l.monthlyCards.toLocaleString('pt-BR')}</td>
+                                        <td className="p-4 md:p-5 text-center text-slate-300 font-mono text-sm">{formatDuration(l.monthlyTime)}</td>
+                                        <td className="p-4 md:p-5 text-center text-orange-400 font-bold">{l.maxStreak || l.currentStreak || 0}</td>
+                                        <td className="p-4 md:p-5 text-center text-emerald-400 font-bold">{(l.maxRetention || l.monthlyRetention || 0).toFixed(1)}%</td>
+                                        {isAdmin && <td className="p-4 md:p-5 text-center"><button onClick={() => handleDeleteUser(l.id, l.email)} className="text-slate-500 hover:text-red-500"><Trash2 size={16} /></button></td>}
+                                    </tr>
+                                ))}
+
+                                {!loading && activeTab === 'simulados' && sortedQuizzes.map((l, i) => {
+                                    const questionsSeen = l.quizStats?.questionsSeen || 0;
+                                    const hits = l.quizStats?.correctAnswers || 0;
+                                    const accuracy = questionsSeen > 0 ? (hits / questionsSeen) * 100 : 0;
+                                    return (
+                                        <tr key={l.id} className="transition-colors hover:bg-slate-800/40">
+                                            <td className="p-4 md:p-5 text-center font-bold text-slate-400">{i + 1}</td>
+                                            <td className="p-4 md:p-5 text-white font-medium">{l.email ? l.email.split('@')[0] : 'Anônimo'}</td>
+                                            <td className="p-4 md:p-5 text-center text-slate-300 font-mono text-sm">{formatDuration(l.quizStats?.totalExamTime || 0)}</td>
+                                            <td className="p-4 md:p-5 text-center text-blue-400 font-mono font-bold">{questionsSeen.toLocaleString('pt-BR')}</td>
+                                            <td className="p-4 md:p-5 text-center text-emerald-400 font-mono font-bold">{hits.toLocaleString('pt-BR')}</td>
+                                            <td className="p-4 md:p-5 text-center text-purple-400 font-mono font-bold">{(l.quizStats?.examsTaken || 0).toLocaleString('pt-BR')}</td>
+                                            <td className="p-4 md:p-5 text-center text-yellow-400 font-bold">{accuracy.toFixed(1)}%</td>
+                                            {isAdmin && <td className="p-4 md:p-5 text-center"><button onClick={() => handleDeleteUser(l.id, l.email)} className="text-slate-500 hover:text-red-500"><Trash2 size={16} /></button></td>}
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
-                    </div>
-
-                    <div className="md:hidden space-y-3">
-                        {loading ? (
-                            <div className="glass rounded-2xl border border-slate-700/50 p-6 text-center text-slate-500">Sincronizando dados ao vivo...</div>
-                        ) : leaders.map((l, i) => (
-                            <div key={l.id} className={`glass rounded-2xl border border-slate-700/50 p-4 ${i === 0 ? 'ring-1 ring-yellow-500/40' : i === 1 ? 'ring-1 ring-slate-300/30' : i === 2 ? 'ring-1 ring-amber-500/30' : ''}`}>
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2 text-white font-semibold">
-                                        <span className="text-slate-400">#{i + 1}</span>
-                                        <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-400">
-                                            {l.email ? l.email.charAt(0).toUpperCase() : '?'}
-                                        </div>
-                                        <span className="truncate max-w-[140px]">{l.email ? l.email.split('@')[0] : 'Anônimo'}</span>
-                                    </div>
-                                    <span className={`inline-flex items-center gap-1 font-mono font-bold ${l.currentStreak >= 3 ? 'text-orange-500' : 'text-slate-500'}`}>
-                                        {l.currentStreak > 0 && <Flame size={12} className={l.currentStreak >= 3 ? 'animate-pulse' : ''}/>}
-                                        {l.currentStreak}
-                                    </span>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                    <div className="bg-slate-900/70 rounded-lg p-2 border border-slate-800">
-                                        <div className="text-slate-500">Hoje (Cards)</div>
-                                        <div className="text-blue-400 font-mono font-bold text-sm">{l.cardsSeenToday.toLocaleString('pt-BR')}</div>
-                                    </div>
-                                    <div className="bg-slate-900/70 rounded-lg p-2 border border-slate-800">
-                                        <div className="text-slate-500">Hoje (Tempo)</div>
-                                        <div className="text-slate-300 font-mono text-sm">{formatDuration(l.timeStudiedToday)}</div>
-                                    </div>
-                                    <div className="bg-slate-900/70 rounded-lg p-2 border border-slate-800">
-                                        <div className="text-slate-500">Retenção</div>
-                                        <div className="text-sm font-bold text-emerald-400">{l.retention ? l.retention.toFixed(1) : 0}%</div>
-                                    </div>
-                                    <div className="bg-slate-900/70 rounded-lg p-2 border border-slate-800">
-                                        <div className="text-slate-500">Últ. 31 dias</div>
-                                        <div className="text-slate-400 font-mono text-sm">{calculateLast31Days(l.dailyActivity).toLocaleString('pt-BR')}</div>
-                                    </div>
-                                </div>
-
-                                {isAdmin && (
-                                    <button onClick={() => handleDeleteUser(l.id, l.email)} className="mt-3 w-full text-slate-500 hover:text-red-500 p-2 rounded-lg hover:bg-red-500/10 transition-colors border border-slate-800" title="Deletar este usuário do ranking">
-                                        <span className="inline-flex items-center gap-2 text-sm"><Trash2 size={14} /> Remover do ranking</span>
-                                    </button>
-                                )}
-                            </div>
-                        ))}
                     </div>
                 </div>
             );
@@ -2392,6 +2400,7 @@
         };
 
         const QuizSession = ({ queue, onFinish }) => {
+            const [sessionStartTime] = React.useState(Date.now());
             const [index, setIndex] = React.useState(0);
             const [selectedOption, setSelectedOption] = React.useState(null);
             const [showExplanation, setShowExplanation] = React.useState(false);
@@ -2418,7 +2427,7 @@
                             </div>
                         </div>
 
-                        <button onClick={onFinish} className="bg-purple-600 hover:bg-purple-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-purple-900/20">Finalizar e Voltar</button>
+                        <button onClick={() => onFinish({ score, totalQuestions: queue.length, totalTimeMs: Date.now() - sessionStartTime })} className="bg-purple-600 hover:bg-purple-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-purple-900/20">Finalizar e Voltar</button>
                     </div>
                 );
             }
@@ -2640,6 +2649,7 @@
                     if (!docSnap.exists()) {
                         const defaultStats = {
                             email: user.email || 'Anônimo', cardsSeen: 0, correctAnswers: 0, retention: 0, timeStudied: 0, currentStreak: 0,
+                            maxStreak: 0, maxRetention: 0, quizStats: { totalExamTime: 0, questionsSeen: 0, correctAnswers: 0, examsTaken: 0 },
                             dailyActivity: {}, dailyTime: {}, algorithm: 'fsrs', fsrsRetention: 0.90, learningProfile: 'standard'
                         };
                         await setDoc(statsRef, { ...defaultStats, lastActive: serverTimestamp() });
@@ -2772,6 +2782,33 @@
                 setView("quiz_session");
             };
 
+            const handleQuizSessionFinish = async ({ score = 0, totalQuestions = 0, totalTimeMs = 0 } = {}) => {
+                if (user && userStats) {
+                    const safeQuestions = Math.max(totalQuestions, 0);
+                    const safeScore = Math.max(score, 0);
+                    const safeTime = Math.max(totalTimeMs, 0);
+
+                    const updatedStats = { ...userStats };
+                    const currentQuizStats = updatedStats.quizStats || { totalExamTime: 0, questionsSeen: 0, correctAnswers: 0, examsTaken: 0 };
+                    updatedStats.quizStats = {
+                        totalExamTime: (currentQuizStats.totalExamTime || 0) + safeTime,
+                        questionsSeen: (currentQuizStats.questionsSeen || 0) + safeQuestions,
+                        correctAnswers: (currentQuizStats.correctAnswers || 0) + safeScore,
+                        examsTaken: (currentQuizStats.examsTaken || 0) + 1
+                    };
+                    setUserStats(updatedStats);
+
+                    try {
+                        const statsRef = doc(db, 'leaderboard', user.uid);
+                        await setDoc(statsRef, { email: user.email, ...updatedStats, lastActive: serverTimestamp() }, { merge: true });
+                    } catch (e) {
+                        console.error("Erro ao salvar stats de simulado:", e);
+                    }
+                }
+
+                setView("quizzes");
+            };
+
             const handleSaveAboutContent = async (newContent) => {
                 try {
                     await setDoc(doc(db, "site_config", "about"), { content: newContent }, { merge: true });
@@ -2833,7 +2870,7 @@
                                     </button>
                                 )}
 
-                                {user && <button onClick={() => setView("leaderboard")} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'leaderboard' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-yellow-400 hover:bg-slate-800'}`}><Trophy size={14} /> <span className="hidden sm:inline">Ranking Diário</span><span className="sm:hidden">Ranking</span></button>}
+                                {user && <button onClick={() => setView("leaderboard")} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'leaderboard' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-yellow-400 hover:bg-slate-800'}`}><Trophy size={14} /> <span className="hidden sm:inline">Ranking</span><span className="sm:hidden">Ranking</span></button>}
 
                                 <button onClick={() => setView("about")} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'about' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-blue-400 hover:bg-slate-800'}`}><Info size={14} /> Sobre</button>
 
@@ -2871,7 +2908,7 @@
 
                         {view === "quizzes" && <QuizDashboard quizzes={quizzes} onStartQuiz={handleStartQuiz} />}
 
-                        {view === "quiz_session" && <QuizSession queue={quizQueue} onFinish={() => setView("quizzes")} />}
+                        {view === "quiz_session" && <QuizSession queue={quizQueue} onFinish={handleQuizSessionFinish} />}
 
                         {view === "leaderboard" && <LeaderboardView isAdmin={isAdmin} />}
 

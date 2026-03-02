@@ -122,7 +122,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, updateDoc, serverTimestamp, query, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, ArrowLeftRight, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag, Network, ListChecks, CheckSquare, BrainCircuit, Sliders, Timer, TerminalSquare, ListTodo, CheckCircle, Circle, HelpCircle, Award, Hash, Globe, AppWindow, Image as ImageIcon, Info, Headphones, Mic } from "https://esm.sh/lucide-react@0.344.0?bundle";
+        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, ArrowLeftRight, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag, Network, ListChecks, CheckSquare, BrainCircuit, Sliders, Timer, TerminalSquare, ListTodo, CheckCircle, Circle, HelpCircle, Award, Hash, Globe, AppWindow, Image as ImageIcon, Info, Headphones, Mic, StickyNote, Send } from "https://esm.sh/lucide-react@0.344.0?bundle";
 
         const firebaseConfig = {
             apiKey: "AIzaSyClIIJkYOmAvEKPtXvG-SIi9SzxQpaBN9s",
@@ -1401,93 +1401,118 @@
             );
         };
 
-        const AboutView = ({ content, isAdmin, onSave }) => {
-            const [isEditing, setIsEditing] = React.useState(false);
-            const [editContent, setEditContent] = React.useState(content);
-            const [isSaving, setIsSaving] = React.useState(false);
+        const POST_IT_COLORS = [
+            { id: 'sun', label: 'Sol', bg: 'bg-amber-200', border: 'border-amber-300', text: 'text-amber-950' },
+            { id: 'mint', label: 'Menta', bg: 'bg-emerald-200', border: 'border-emerald-300', text: 'text-emerald-950' },
+            { id: 'sky', label: 'Céu', bg: 'bg-sky-200', border: 'border-sky-300', text: 'text-sky-950' },
+            { id: 'violet', label: 'Violeta', bg: 'bg-violet-200', border: 'border-violet-300', text: 'text-violet-950' },
+            { id: 'rose', label: 'Rosa', bg: 'bg-rose-200', border: 'border-rose-300', text: 'text-rose-950' }
+        ];
+        const POST_IT_MAX_CHARS = 180;
 
-            React.useEffect(() => {
-                setEditContent(content);
-            }, [content]);
+        const PostItsView = ({ postIts, isAdmin, onCreatePostIt, onDeletePostIt, isPosting }) => {
+            const [noteText, setNoteText] = React.useState('');
+            const [selectedColor, setSelectedColor] = React.useState(POST_IT_COLORS[0].id);
 
-            const handleSave = async () => {
-                setIsSaving(true);
-                await onSave(editContent);
-                setIsSaving(false);
-                setIsEditing(false);
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                const trimmed = noteText.trim();
+                if (!trimmed) return;
+                await onCreatePostIt({ text: trimmed, color: selectedColor });
+                setNoteText('');
+                setSelectedColor(POST_IT_COLORS[0].id);
             };
 
-            const handleCancel = () => {
-                setEditContent(content);
-                setIsEditing(false);
+            const formatPostDate = (createdAt) => {
+                if (!createdAt?.toDate) return 'Agora mesmo';
+                return createdAt.toDate().toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
             };
 
             return (
-                <div className="max-w-4xl mx-auto animate-fade-in pb-12">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                                <Info className="text-blue-500" size={32} />
-                                Sobre & Diretrizes
-                            </h2>
-                            <p className="text-slate-400 mt-2">Avisos, ementas da faculdade, regras do algoritmo e orientações gerais do site.</p>
-                        </div>
-                        {isAdmin && !isEditing && (
-                            <button
-                                onClick={() => setIsEditing(true)}
-                                className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 border border-slate-700"
-                            >
-                                <Pencil size={16} /> Editar Conteúdo
-                            </button>
-                        )}
+                <div className="max-w-6xl mx-auto animate-fade-in pb-12 space-y-6">
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 md:p-5">
+                        <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
+                            <StickyNote className="text-blue-400" size={30} /> Post-Its Colaborativos
+                        </h2>
+                        <p className="text-slate-300 mt-2 text-sm md:text-base">Use este mural para compartilhar dúvidas, macetes e analogias úteis de estudo. Todos os post-its devem estar relacionados às matérias e analogias de aprendizagem.</p>
                     </div>
 
-                    <div className="glass p-6 md:p-10 rounded-3xl border border-slate-700/50 shadow-2xl relative">
-                        {isEditing ? (
-                            <div className="flex flex-col gap-4 animate-fade-in">
-                                <div className="bg-blue-500/10 border border-blue-500/30 p-3 rounded-lg flex items-center gap-2 text-sm text-blue-300">
-                                    <Info size={16} /> Você está editando o conteúdo público visível para todos os alunos.
-                                </div>
-                                <RichTextEditor value={editContent} onChange={setEditContent} minHeight="h-[500px]" />
-                                <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-800">
+                    <form onSubmit={handleSubmit} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 md:p-6 space-y-4">
+                        <div>
+                            <label className="text-sm font-semibold text-slate-200 block mb-2">Seu post-it (máximo de {POST_IT_MAX_CHARS} caracteres)</label>
+                            <textarea
+                                value={noteText}
+                                onChange={(e) => setNoteText(e.target.value.slice(0, POST_IT_MAX_CHARS))}
+                                placeholder="Ex.: Escalonamento de processos é como organizar fila no banco: prioridade evita gargalo."
+                                className="w-full min-h-[120px] resize-y bg-slate-950 border border-slate-700 rounded-xl p-3 text-slate-100 outline-none focus:border-blue-500"
+                            />
+                            <div className="text-right text-xs mt-1 text-slate-400">{noteText.length}/{POST_IT_MAX_CHARS}</div>
+                        </div>
+
+                        <div>
+                            <p className="text-sm font-semibold text-slate-200 mb-2">Cor do post-it</p>
+                            <div className="flex flex-wrap gap-2">
+                                {POST_IT_COLORS.map((color) => (
                                     <button
-                                        onClick={handleCancel}
-                                        disabled={isSaving}
-                                        className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-2.5 rounded-xl font-bold transition-all"
+                                        key={color.id}
+                                        type="button"
+                                        onClick={() => setSelectedColor(color.id)}
+                                        className={`px-3 py-2 rounded-lg border text-xs font-bold transition-all ${color.bg} ${color.border} ${color.text} ${selectedColor === color.id ? 'ring-2 ring-white/70 scale-105' : 'opacity-90 hover:opacity-100'}`}
                                     >
-                                        Cancelar
+                                        {color.label}
                                     </button>
-                                    <button
-                                        onClick={handleSave}
-                                        disabled={isSaving}
-                                        className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white px-8 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg shadow-blue-900/20"
-                                    >
-                                        {isSaving ? <RotateCcw size={18} className="animate-spin" /> : <Save size={18} />}
-                                        Publicar Alterações
-                                    </button>
-                                </div>
+                                ))}
                             </div>
-                        ) : (
-                            <div className="animate-fade-in">
-                                {content && content.trim() !== '' ? (
-                                    <div
-                                        className="prose prose-invert prose-lg text-slate-300 max-w-none prose-left prose-a:text-blue-400 hover:prose-a:text-blue-300"
-                                        dangerouslySetInnerHTML={{ __html: content }}
-                                    />
-                                ) : (
-                                    <div className="text-center py-20 flex flex-col items-center justify-center">
-                                        <Info size={48} className="text-slate-700 mb-4" />
-                                        <h3 className="text-xl font-bold text-slate-300 mb-2">Nenhum conteúdo adicionado ainda.</h3>
-                                        {isAdmin ? (
-                                            <p className="text-slate-500">Clique no botão "Editar Conteúdo" no topo para preencher as informações.</p>
-                                        ) : (
-                                            <p className="text-slate-500">O administrador do sistema ainda não disponibilizou informações nesta página.</p>
-                                        )}
+                        </div>
+
+                        <div className="flex justify-end">
+                            <button
+                                type="submit"
+                                disabled={isPosting || noteText.trim().length === 0}
+                                className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400 text-white px-5 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2"
+                            >
+                                <Send size={16} /> {isPosting ? 'Publicando...' : 'Publicar Post-it'}
+                            </button>
+                        </div>
+                    </form>
+
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {postIts.map((post) => {
+                            const selected = POST_IT_COLORS.find((c) => c.id === post.color) || POST_IT_COLORS[0];
+                            const author = post.authorName || 'Anônimo';
+                            return (
+                                <article key={post.id} className={`${selected.bg} ${selected.border} border rounded-2xl p-4 shadow-lg shadow-slate-950/30 flex flex-col gap-3 min-h-[210px]`}>
+                                    <p className={`${selected.text} text-sm leading-relaxed whitespace-pre-wrap break-words flex-1`}>{post.text}</p>
+                                    <div className="border-t border-black/10 pt-2 text-xs text-black/70 space-y-1">
+                                        <p className="font-semibold">Autor: {author}</p>
+                                        <p>Publicado em: {formatPostDate(post.createdAt)}</p>
                                     </div>
-                                )}
-                            </div>
-                        )}
+                                    {isAdmin && (
+                                        <button
+                                            onClick={() => onDeletePostIt(post.id)}
+                                            className="self-end text-red-700 hover:text-red-800 text-xs font-bold flex items-center gap-1"
+                                        >
+                                            <Trash2 size={14} /> Excluir
+                                        </button>
+                                    )}
+                                </article>
+                            );
+                        })}
                     </div>
+
+                    {postIts.length === 0 && (
+                        <div className="text-center py-14 border border-dashed border-slate-700 rounded-2xl bg-slate-900/40">
+                            <StickyNote size={42} className="mx-auto text-slate-600 mb-3" />
+                            <p className="text-slate-300 font-semibold">Ainda não existem post-its no mural.</p>
+                            <p className="text-slate-500 text-sm mt-1">Seja o primeiro a compartilhar uma analogia ou dica de estudo.</p>
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -2562,7 +2587,8 @@
             const [userStats, setUserStats] = React.useState(null);
 
             const [siteSettings, setSiteSettings] = React.useState({ title: '', favicon: '' });
-            const [aboutContent, setAboutContent] = React.useState("");
+            const [postIts, setPostIts] = React.useState([]);
+            const [isPostingPostIt, setIsPostingPostIt] = React.useState(false);
 
             const [studyQueue, setStudyQueue] = React.useState([]);
             const [quizQueue, setQuizQueue] = React.useState([]);
@@ -2623,15 +2649,7 @@
                     }
                 }, (error) => console.error("Erro site_config onSnapshot:", error));
 
-                const unsubAbout = onSnapshot(doc(db, "site_config", "about"), (docSnap) => {
-                    if (docSnap.exists()) {
-                        setAboutContent(docSnap.data().content || "");
-                    } else {
-                        setAboutContent("");
-                    }
-                }, (error) => console.error("Erro about config onSnapshot:", error));
-
-                return () => { unsubSettings(); unsubAbout(); };
+                return () => { unsubSettings(); };
             }, [user]);
 
             React.useEffect(() => {
@@ -2686,7 +2704,15 @@
                     }
                 }, (error) => console.error("Erro stats onSnapshot:", error));
 
-                return () => { unsubCards(); unsubQuizzes(); unsubReviews(); unsubStats(); };
+                const qPostIts = query(collection(db, "post_its"));
+                const unsubPostIts = onSnapshot(qPostIts, (snapshot) => {
+                    const loadedPostIts = snapshot.docs
+                        .map((docItem) => ({ id: docItem.id, ...docItem.data() }))
+                        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                    setPostIts(loadedPostIts);
+                }, (error) => console.error("Erro post_its onSnapshot:", error));
+
+                return () => { unsubCards(); unsubQuizzes(); unsubReviews(); unsubStats(); unsubPostIts(); };
             }, [user]);
 
             const getDecksStructure = () => {
@@ -2837,11 +2863,35 @@
                 setView("quizzes");
             };
 
-            const handleSaveAboutContent = async (newContent) => {
+            const handleCreatePostIt = async ({ text, color }) => {
+                if (!user) return;
+                const normalizedText = text.trim().slice(0, POST_IT_MAX_CHARS);
+                if (!normalizedText) return;
+
                 try {
-                    await setDoc(doc(db, "site_config", "about"), { content: newContent }, { merge: true });
+                    setIsPostingPostIt(true);
+                    const authorName = user.email ? user.email.split('@')[0] : 'Anônimo';
+                    await addDoc(collection(db, "post_its"), {
+                        text: normalizedText,
+                        color,
+                        authorName,
+                        authorEmail: user.email || null,
+                        userId: user.uid,
+                        createdAt: serverTimestamp()
+                    });
                 } catch (err) {
-                    alert("Erro ao salvar a página Sobre: " + err.message);
+                    alert("Erro ao publicar post-it: " + err.message);
+                } finally {
+                    setIsPostingPostIt(false);
+                }
+            };
+
+            const handleDeletePostIt = async (postId) => {
+                if (!isAdmin) return;
+                try {
+                    await deleteDoc(doc(db, "post_its", postId));
+                } catch (err) {
+                    alert("Erro ao excluir post-it: " + err.message);
                 }
             };
 
@@ -2900,7 +2950,7 @@
 
                                 {user && <button onClick={() => setView("leaderboard")} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'leaderboard' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-yellow-400 hover:bg-slate-800'}`}><Trophy size={14} /> <span className="hidden sm:inline">Ranking</span><span className="sm:hidden">Ranking</span></button>}
 
-                                <button onClick={() => setView("about")} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'about' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-blue-400 hover:bg-slate-800'}`}><Info size={14} /> Sobre</button>
+                                <button onClick={() => setView("postits")} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'postits' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-blue-400 hover:bg-slate-800'}`}><StickyNote size={14} /> Post-Its</button>
 
                                 {isAdmin && <button onClick={() => setView("admin")} className="text-amber-500 hover:text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20 transition-all flex items-center gap-1.5 text-sm"><Lock size={14} /> Admin</button>}
                                 {user && <button onClick={() => setSettingsOpen(true)} className="text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800" title="Configurações (Engine)"><Settings size={20}/></button>}
@@ -2940,7 +2990,7 @@
 
                         {view === "leaderboard" && <LeaderboardView isAdmin={isAdmin} />}
 
-                        {view === "about" && <AboutView content={aboutContent} isAdmin={isAdmin} onSave={handleSaveAboutContent} />}
+                        {view === "postits" && <PostItsView postIts={postIts} isAdmin={isAdmin} onCreatePostIt={handleCreatePostIt} onDeletePostIt={handleDeletePostIt} isPosting={isPostingPostIt} />}
 
                         {view === "admin" && isAdmin && <AdminPanel cards={cards} quizzes={quizzes} onExit={() => setView("decks")} siteSettings={siteSettings} />}
                     </main>

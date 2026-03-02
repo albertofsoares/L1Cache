@@ -1658,9 +1658,41 @@
                 setEditingId(card.id);
             };
 
+            const handleDeleteSelectedCards = async (ids) => {
+                if (!ids || ids.length === 0) return;
+                const isMultiDelete = ids.length > 1;
+                const confirmationMessage = isMultiDelete
+                    ? `Excluir ${ids.length} cards selecionados de forma irreversível?`
+                    : "Deletar este card de forma irreversível?";
+                if (!confirm(confirmationMessage)) return;
+
+                try {
+                    const chunkSize = 450;
+                    for (let i = 0; i < ids.length; i += chunkSize) {
+                        const chunk = ids.slice(i, i + chunkSize);
+                        const batch = writeBatch(db);
+                        chunk.forEach(cardId => batch.delete(doc(db, "cards", cardId)));
+                        await batch.commit();
+                    }
+                    setSelectedCardIds(prev => {
+                        const next = new Set(prev);
+                        ids.forEach(id => next.delete(id));
+                        return next;
+                    });
+                    if (editingId && ids.includes(editingId)) setEditingId(null);
+                } catch (err) {
+                    alert("Erro ao deletar card(s): " + err.message);
+                }
+            };
+
             const handleDeleteCard = async (id, e) => {
                 e.stopPropagation();
-                if(confirm("Deletar este card de forma irreversível?")) await deleteDoc(doc(db, "cards", id));
+                const shouldDeleteSelected = selectedCardIds.size > 1 && selectedCardIds.has(id);
+                if (shouldDeleteSelected) {
+                    await handleDeleteSelectedCards(Array.from(selectedCardIds));
+                    return;
+                }
+                await handleDeleteSelectedCards([id]);
             };
 
             const handleQuizOptionChange = (index, value) => {
@@ -2075,11 +2107,9 @@
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            {selectedCardIds.size === 0 && (
-                                                                <div className="flex justify-end gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <button onClick={(e) => handleDeleteCard(c.id, e)} className="text-red-400 hover:bg-red-900/30 p-1.5 rounded-lg transition-colors h-fit" title="Excluir"><Trash2 size={14}/></button>
-                                                                </div>
-                                                            )}
+                                                            <div className="flex justify-end gap-2 mt-2 opacity-70 group-hover:opacity-100 transition-opacity">
+                                                                <button onClick={(e) => handleDeleteCard(c.id, e)} className="text-red-400 hover:bg-red-900/30 p-1.5 rounded-lg transition-colors h-fit" title={selectedCardIds.size > 1 && isSelected ? `Excluir ${selectedCardIds.size} selecionados` : "Excluir"}><Trash2 size={14}/></button>
+                                                            </div>
                                                         </div>
                                                     );
                                                 })}

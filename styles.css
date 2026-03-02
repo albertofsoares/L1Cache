@@ -1,0 +1,4 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+a { text-decoration: none; }
+button:disabled { opacity: .6; cursor: not-allowed; }

@@ -88,6 +88,28 @@
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #3b82f6; cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
+
+        .live-review-highlight {
+            font-weight: 700;
+            background: linear-gradient(90deg, #22d3ee 0%, #a78bfa 35%, #f472b6 50%, #a78bfa 65%, #22d3ee 100%);
+            background-size: 220% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: liveReviewScan 2.8s ease-in-out infinite, liveReviewPulse 2.8s ease-in-out infinite;
+            text-shadow: 0 0 14px rgba(167, 139, 250, 0.35);
+        }
+
+        @keyframes liveReviewScan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes liveReviewPulse {
+            0%, 100% { filter: drop-shadow(0 0 2px rgba(34, 211, 238, 0.35)) drop-shadow(0 0 7px rgba(244, 114, 182, 0.2)); }
+            50% { filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.7)) drop-shadow(0 0 14px rgba(244, 114, 182, 0.5)); }
+        }
     </style>
 </head>
 
@@ -1064,6 +1086,7 @@
 
         const DeckRow = ({ name, stats, level, isExpanded, onToggle, onStudy, hasChildren, icon }) => {
             const paddingLeft = level === 0 ? 'pl-4 md:pl-6' : level === 1 ? 'pl-10 md:pl-14' : 'pl-16 md:pl-24';
+            const isLiveReview = level === 1 && name?.trim().toLowerCase() === 'live de revisão';
             return (
                <div className={`grid grid-cols-12 gap-2 items-center py-3 border-b border-slate-800/50 hover:bg-slate-800/50 transition-colors group cursor-pointer ${paddingLeft}`} onClick={(e) => { e.stopPropagation(); onStudy(); }}>
                    <div className="col-span-6 md:col-span-6 flex items-center gap-2">
@@ -1073,7 +1096,7 @@
                            </button>
                        ) : <div className="w-6 shrink-0"></div>}
                        {icon && <span className="text-slate-500 shrink-0">{icon}</span>}
-                       <span className={`font-medium truncate ${level === 0 ? 'text-white text-base md:text-lg' : level === 1 ? 'text-slate-200 text-sm md:text-base' : 'text-slate-400 text-sm'}`} title={name}>{name}</span>
+                       <span className={`${isLiveReview ? 'live-review-highlight' : 'font-medium'} truncate ${level === 0 ? 'text-white text-base md:text-lg' : level === 1 ? 'text-slate-200 text-sm md:text-base' : 'text-slate-400 text-sm'}`} title={name}>{name}</span>
                    </div>
                    <div className="col-span-2 md:col-span-2 text-center font-mono text-sm">{formatCount(stats.n, 'text-blue-400')}</div>
                    <div className="col-span-2 md:col-span-2 text-center font-mono text-sm">{formatCount(stats.l, 'text-orange-400')}</div>

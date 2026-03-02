@@ -1484,7 +1484,7 @@
 
             const [selectedCardIds, setSelectedCardIds] = React.useState(new Set());
 
-            const [bulkForm, setBulkForm] = React.useState({ category: '', lesson: '', subcategory: '', tagsToAdd: [], tagsToRemove: [] });
+            const [bulkForm, setBulkForm] = React.useState({ category: '', lesson: '', subcategory: '', prerequisiteTopic: '', tagsToAdd: [], tagsToRemove: [] });
             const [bulkTagAddInput, setBulkTagAddInput] = React.useState('');
             const [bulkTagRemoveInput, setBulkTagRemoveInput] = React.useState('');
             const [isBulkProcessing, setIsBulkProcessing] = React.useState(false);
@@ -1573,7 +1573,7 @@
                 e.preventDefault();
                 if (selectedCardIds.size === 0) return;
                 const idsArray = Array.from(selectedCardIds);
-                const hasChanges = bulkForm.category || bulkForm.lesson || bulkForm.subcategory || bulkForm.tagsToAdd.length > 0 || bulkForm.tagsToRemove.length > 0;
+                const hasChanges = bulkForm.category || bulkForm.lesson || bulkForm.subcategory || bulkForm.prerequisiteTopic || bulkForm.tagsToAdd.length > 0 || bulkForm.tagsToRemove.length > 0;
 
                 if (!hasChanges) { alert("Nenhuma modificação definida."); return; }
                 if (!confirm(`Modificar ${idsArray.length} flashcards?`)) return;
@@ -1593,6 +1593,7 @@
                         if (bulkForm.category.trim()) updateData.category = normalize(bulkForm.category);
                         if (bulkForm.lesson.trim()) updateData.lesson = normalize(bulkForm.lesson);
                         if (bulkForm.subcategory.trim()) updateData.subcategory = normalize(bulkForm.subcategory);
+                        if (bulkForm.prerequisiteTopic.trim()) updateData.prerequisiteTopic = normalize(bulkForm.prerequisiteTopic);
 
                         let currentTags = [...(card.tags || [])];
                         let tagsChanged = false;
@@ -1618,7 +1619,7 @@
                 }
                 setIsBulkProcessing(false);
                 setSelectedCardIds(new Set());
-                setBulkForm({ category: '', lesson: '', subcategory: '', tagsToAdd: [], tagsToRemove: [] });
+                setBulkForm({ category: '', lesson: '', subcategory: '', prerequisiteTopic: '', tagsToAdd: [], tagsToRemove: [] });
             };
 
             const handleAddTag = (e, isQuiz = false) => {
@@ -2168,7 +2169,7 @@
                                                 <p>Deixe o campo vazio se não quiser alterar a propriedade. Preencher sobrescreverá todos selecionados.</p>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-shrink-0 border-b border-slate-800 pb-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-shrink-0 border-b border-slate-800 pb-4">
                                                 <div className="space-y-1">
                                                     <label className="text-xs font-bold text-amber-500 uppercase ml-1 block">Alterar Matéria para</label>
                                                     <input className="w-full bg-slate-800 p-3 rounded-lg text-white border border-slate-700 focus:border-amber-500 outline-none font-mono text-sm placeholder:text-slate-600" placeholder="Manter atual" value={bulkForm.category} onChange={e => setBulkForm(prev => ({...prev, category: e.target.value}))} list="category-suggestions" />
@@ -2180,6 +2181,10 @@
                                                 <div className="space-y-1">
                                                     <label className="text-xs font-bold text-amber-500 uppercase ml-1 block">Alterar Tópico para</label>
                                                     <input className="w-full bg-slate-800 p-3 rounded-lg text-white border border-slate-700 focus:border-amber-500 outline-none font-mono text-sm placeholder:text-slate-600" placeholder="Manter atual" value={bulkForm.subcategory} onChange={e => setBulkForm(prev => ({...prev, subcategory: e.target.value}))} list="subcategory-suggestions" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-xs font-bold text-amber-500 uppercase ml-1 block">Alterar Pré-requisito para</label>
+                                                    <input className="w-full bg-slate-800 p-3 rounded-lg text-white border border-slate-700 focus:border-amber-500 outline-none font-mono text-sm placeholder:text-slate-600" placeholder="Manter atual" value={bulkForm.prerequisiteTopic} onChange={e => setBulkForm(prev => ({...prev, prerequisiteTopic: e.target.value}))} list="subcategory-suggestions" />
                                                 </div>
                                             </div>
 

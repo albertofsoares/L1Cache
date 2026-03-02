@@ -30,16 +30,24 @@ export async function listSubjects() {
 }
 
 export async function fetchLessonCards(subject, unit, lesson) {
+  // Query simples (sem índice composto): busca por subject e filtra localmente
   const q = Fs.query(
     Fs.collection(db, APP.collections.cards),
-    Fs.where("subject", "==", subject),
-    Fs.where("unit", "==", Number(unit)),
-    Fs.where("lesson", "==", Number(lesson)),
-    Fs.orderBy("order", "asc"),
-    Fs.limit(500)
+    Fs.where("subject", "==", String(subject)),
+    Fs.limit(2000)
   );
+
   const snap = await Fs.getDocs(q);
-  return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+
+  const u = Number(unit);
+  const l = Number(lesson);
+
+  const cards = snap.docs
+    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+    .filter((c) => Number(c.unit) === u && Number(c.lesson) === l)
+    .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+
+  return cards;
 }
 
 export async function countLessonCards(subject, unit, lesson) {

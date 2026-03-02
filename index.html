@@ -121,7 +121,7 @@
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, updateDoc, serverTimestamp, query, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, updateDoc, serverTimestamp, query, onSnapshot, writeBatch, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, ArrowLeftRight, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag, Network, ListChecks, CheckSquare, BrainCircuit, Sliders, Timer, TerminalSquare, ListTodo, CheckCircle, Circle, HelpCircle, Award, Hash, Globe, AppWindow, Image as ImageIcon, Info, Headphones, Mic, StickyNote, Send } from "https://esm.sh/lucide-react@0.344.0?bundle";
 
         const firebaseConfig = {
@@ -158,6 +158,24 @@
             const day = String(dateObj.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         };
+
+        const buildDefaultUserStats = (email = 'Anônimo') => ({
+            email,
+            cardsSeen: 0,
+            correctAnswers: 0,
+            retention: 0,
+            timeStudied: 0,
+            currentStreak: 0,
+            maxStreak: 0,
+            maxRetention: 0,
+            quizStats: { totalExamTime: 0, questionsSeen: 0, correctAnswers: 0, examsTaken: 0 },
+            dailyActivity: {},
+            dailyTime: {},
+            dailyCorrect: {},
+            algorithm: 'fsrs',
+            fsrsRetention: 0.90,
+            learningProfile: 'standard'
+        });
 
         // Engine de Áudio (Aprimorada com Gerador Browniano)
         const AudioEngine = (function() {
@@ -2693,22 +2711,17 @@
                 const statsRef = doc(db, 'leaderboard', user.uid);
                 const unsubStats = onSnapshot(statsRef, async (docSnap) => {
                     if (!docSnap.exists()) {
-                        const defaultStats = {
-                            email: user.email || 'Anônimo', cardsSeen: 0, correctAnswers: 0, retention: 0, timeStudied: 0, currentStreak: 0,
-                            maxStreak: 0, maxRetention: 0, quizStats: { totalExamTime: 0, questionsSeen: 0, correctAnswers: 0, examsTaken: 0 },
-                            dailyActivity: {}, dailyTime: {}, algorithm: 'fsrs', fsrsRetention: 0.90, learningProfile: 'standard'
-                        };
+                        const defaultStats = buildDefaultUserStats(user.email || 'Anônimo');
+                        setUserStats(defaultStats);
                         await setDoc(statsRef, { ...defaultStats, lastActive: serverTimestamp() });
                     } else {
                         setUserStats(docSnap.data());
                     }
                 }, (error) => console.error("Erro stats onSnapshot:", error));
 
-                const qPostIts = query(collection(db, "post_its"));
+                const qPostIts = query(collection(db, "post_its"), orderBy("createdAt", "desc"));
                 const unsubPostIts = onSnapshot(qPostIts, (snapshot) => {
-                    const loadedPostIts = snapshot.docs
-                        .map((docItem) => ({ id: docItem.id, ...docItem.data() }))
-                        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                    const loadedPostIts = snapshot.docs.map((docItem) => ({ id: docItem.id, ...docItem.data() }));
                     setPostIts(loadedPostIts);
                 }, (error) => console.error("Erro post_its onSnapshot:", error));
 
@@ -2837,24 +2850,28 @@
             };
 
             const handleQuizSessionFinish = async ({ score = 0, totalQuestions = 0, totalTimeMs = 0 } = {}) => {
-                if (user && userStats) {
+                if (user) {
                     const safeQuestions = Math.max(totalQuestions, 0);
                     const safeScore = Math.max(score, 0);
                     const safeTime = Math.max(totalTimeMs, 0);
 
-                    const updatedStats = { ...userStats };
-                    const currentQuizStats = updatedStats.quizStats || { totalExamTime: 0, questionsSeen: 0, correctAnswers: 0, examsTaken: 0 };
-                    updatedStats.quizStats = {
-                        totalExamTime: (currentQuizStats.totalExamTime || 0) + safeTime,
-                        questionsSeen: (currentQuizStats.questionsSeen || 0) + safeQuestions,
-                        correctAnswers: (currentQuizStats.correctAnswers || 0) + safeScore,
-                        examsTaken: (currentQuizStats.examsTaken || 0) + 1
+                    const baseStats = userStats ? { ...userStats } : buildDefaultUserStats(user.email || 'Anônimo');
+                    const currentQuizStats = baseStats.quizStats || { totalExamTime: 0, questionsSeen: 0, correctAnswers: 0, examsTaken: 0 };
+                    const updatedStats = {
+                        ...baseStats,
+                        email: user.email || baseStats.email || 'Anônimo',
+                        quizStats: {
+                            totalExamTime: (currentQuizStats.totalExamTime || 0) + safeTime,
+                            questionsSeen: (currentQuizStats.questionsSeen || 0) + safeQuestions,
+                            correctAnswers: (currentQuizStats.correctAnswers || 0) + safeScore,
+                            examsTaken: (currentQuizStats.examsTaken || 0) + 1
+                        }
                     };
                     setUserStats(updatedStats);
 
                     try {
                         const statsRef = doc(db, 'leaderboard', user.uid);
-                        await setDoc(statsRef, { email: user.email, ...updatedStats, lastActive: serverTimestamp() }, { merge: true });
+                        await setDoc(statsRef, { ...updatedStats, lastActive: serverTimestamp() }, { merge: true });
                     } catch (e) {
                         console.error("Erro ao salvar stats de simulado:", e);
                     }

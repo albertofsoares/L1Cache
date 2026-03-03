@@ -2782,7 +2782,10 @@
             const [settingsOpen, setSettingsOpen] = React.useState(false);
             const [installPrompt, setInstallPrompt] = React.useState(null);
             const [isInstallable, setIsInstallable] = React.useState(false);
+            const [showInstallGuide, setShowInstallGuide] = React.useState(false);
             const [isStandalone, setIsStandalone] = React.useState(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
+            const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
+            const isSafari = /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent || '');
 
             // Controle Global do Ruído Marrom
             const [isNoiseActive, setIsNoiseActive] = React.useState(false);
@@ -3130,7 +3133,7 @@
 
             const handleInstallApp = async () => {
                 if (!installPrompt) {
-                    alert('A instalação não está disponível agora. Acesse via HTTPS e navegue por alguns segundos para o navegador habilitar o botão.');
+                    setShowInstallGuide(true);
                     return;
                 }
 
@@ -3177,10 +3180,10 @@
                                 <button onClick={() => setView("postits")} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'postits' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-blue-400 hover:bg-slate-800'}`}><StickyNote size={14} /> Post-Its</button>
 
                                 {!isStandalone && (
-                                    <button onClick={handleInstallApp} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${isInstallable ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-emerald-400 hover:bg-slate-800'}`} title="Instalar aplicativo">
-                                        <Download size={14} />
-                                        <span className="hidden sm:inline">Baixar app</span>
-                                        <span className="sm:hidden">Instalar</span>
+                                    <button onClick={handleInstallApp} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${isInstallable ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-emerald-400 hover:bg-slate-800'}`} title={isInstallable ? 'Instalar aplicativo' : 'Como instalar o app'}>
+                                        {isInstallable ? <Download size={14} /> : <Info size={14} />}
+                                        <span className="hidden sm:inline">{isInstallable ? 'Baixar app' : 'Como instalar'}</span>
+                                        <span className="sm:hidden">{isInstallable ? 'Instalar' : 'Ajuda'}</span>
                                     </button>
                                 )}
 
@@ -3211,6 +3214,31 @@
 
                                 <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} userStats={userStats} setUserStats={setUserStats} user={user} />
                                 <CustomStudyModal isOpen={customStudyOpen} onClose={() => setCustomStudyOpen(false)} onStart={startCustomStudy} categories={[...new Set(cards.map(c => normalize(c.category)))]} tags={allTags} />
+
+                                {showInstallGuide && (
+                                    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowInstallGuide(false)}>
+                                        <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+                                            <div className="flex items-start gap-3">
+                                                <div className="mt-0.5 rounded-full bg-blue-500/20 p-2 text-blue-400"><Info size={18} /></div>
+                                                <div>
+                                                    <h3 className="text-white font-bold text-lg">Como instalar o aplicativo</h3>
+                                                    <p className="text-slate-300 text-sm mt-2">A instalação automática aparece quando o navegador considera o site elegível.</p>
+                                                </div>
+                                            </div>
+
+                                            <ul className="mt-4 space-y-2 text-sm text-slate-300 list-disc pl-5">
+                                                <li>Abra este site em <strong>HTTPS</strong> (ex.: GitHub Pages já atende).</li>
+                                                <li>Use Chrome ou Edge atualizados e navegue alguns segundos na página.</li>
+                                                <li>Se o botão mudar para <strong>Baixar app</strong>, clique para instalar.</li>
+                                                {(isIOS || isSafari) && <li>No iPhone/Safari: toque em <strong>Compartilhar</strong> e depois em <strong>Adicionar à Tela de Início</strong>.</li>}
+                                            </ul>
+
+                                            <div className="mt-5 flex justify-end">
+                                                <button className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold" onClick={() => setShowInstallGuide(false)}>Entendi</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 

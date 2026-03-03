@@ -138,6 +138,26 @@
         const db = getFirestore(app);
 
         const normalize = (val) => String(val || '').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
+        const escapeHtml = (value) => String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        const sanitizeCardText = (value) => String(value || '')
+            .replace(/[\u200B-\u200D\uFEFF]/g, '')
+            .replace(/\r\n/g, '\n')
+            .replace(/\\n/g, '\n')
+            .trim();
+        const formatCardContent = (value) => {
+            const cleaned = sanitizeCardText(value);
+            if (!cleaned) return '';
+
+            const hasHtmlTags = /<\/?[a-z][\s\S]*?>/i.test(cleaned);
+            if (hasHtmlTags) return cleaned;
+
+            return escapeHtml(cleaned).replace(/\n/g, '<br />');
+        };
         const isCardUnlocked = (card, allCards, reviews) => {
             const prerequisiteTopic = normalize(card?.prerequisiteTopic || '');
             if (!prerequisiteTopic) return true;
@@ -1014,7 +1034,7 @@
                                 <div className="absolute top-4 right-4 text-slate-600 hover:text-blue-400 cursor-pointer transition-colors z-20" title="Ouvir Pergunta" onClick={(e) => { e.stopPropagation(); speakText(card.front); }}><Volume2 size={24} /></div>
 
                                 <div className="w-full max-h-[50%] overflow-y-auto custom-scrollbar px-2 mb-4 pb-4 border-b border-slate-800">
-                                    <div className="prose prose-invert prose-lg font-medium text-white select-text w-full max-w-none leading-relaxed break-words text-center flex flex-col items-center justify-center" dangerouslySetInnerHTML={{__html: card.front || ''}}></div>
+                                    <div className="prose prose-invert prose-lg font-medium text-white select-text w-full max-w-none leading-relaxed break-words text-center flex flex-col items-center justify-center" dangerouslySetInnerHTML={{__html: formatCardContent(card.front)}}></div>
                                 </div>
 
                                 <div className="flex-1 flex flex-col">
@@ -1048,7 +1068,7 @@
 
                                 <div className="w-full border-b border-slate-800/80 pb-4 mb-4 text-center shrink-0">
                                     <span className="text-[10px] uppercase text-slate-600 font-bold tracking-widest block mb-1">Contexto (Pergunta)</span>
-                                    <div className="text-sm text-slate-400 opacity-70 line-clamp-2 px-4" dangerouslySetInnerHTML={{__html: card.front}}></div>
+                                    <div className="text-sm text-slate-400 opacity-70 line-clamp-2 px-4" dangerouslySetInnerHTML={{__html: formatCardContent(card.front)}}></div>
                                 </div>
 
                                 <div className="flex-1 w-full overflow-y-auto custom-scrollbar px-2 flex flex-col gap-6">
@@ -1061,7 +1081,7 @@
 
                                     <div className="w-full">
                                         <span className="text-[10px] uppercase text-blue-500/50 font-bold tracking-widest block mb-2 text-center">Resposta Gabarito:</span>
-                                        <div className="prose prose-invert prose-lg text-slate-200 w-full max-w-none text-center select-text leading-relaxed break-words flex flex-col items-center justify-center" dangerouslySetInnerHTML={{__html: card.back || ''}}></div>
+                                        <div className="prose prose-invert prose-lg text-slate-200 w-full max-w-none text-center select-text leading-relaxed break-words flex flex-col items-center justify-center" dangerouslySetInnerHTML={{__html: formatCardContent(card.back)}}></div>
                                     </div>
                                 </div>
                             </div>
@@ -1841,8 +1861,8 @@
                 const category = normalize(raw.category || raw.subject || 'Geral') || 'Geral';
                 const lesson = normalize(raw.lesson || raw.unit || 'Conteúdo Geral') || 'Conteúdo Geral';
                 const subcategory = normalize(raw.subcategory || raw.topic || 'Geral') || 'Geral';
-                const front = String(raw.front || raw.question || '').trim();
-                const back = String(raw.back || raw.answer || '').trim();
+                const front = sanitizeCardText(raw.front || raw.question || '');
+                const back = sanitizeCardText(raw.back || raw.answer || '');
                 const orderRaw = raw.order ?? raw.position ?? idx;
                 const order = Number.isFinite(Number(orderRaw)) ? Number(orderRaw) : idx;
                 const prerequisiteTopic = normalize(raw.prerequisiteTopic || raw.prerequisitoTopico || raw.topicoPrerequisito || raw.requiredTopic || raw.prerequisite || raw.prerequisito || '');

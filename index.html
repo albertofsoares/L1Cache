@@ -148,7 +148,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, updateDoc, serverTimestamp, query, onSnapshot, writeBatch, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, ArrowLeftRight, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag, Network, ListChecks, CheckSquare, BrainCircuit, Sliders, TerminalSquare, ListTodo, CheckCircle, Circle, HelpCircle, Award, Hash, Globe, AppWindow, Image as ImageIcon, Info, Headphones, Mic, StickyNote, Send } from "https://esm.sh/lucide-react@0.344.0?bundle";
+        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, ArrowLeftRight, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag, Network, ListChecks, CheckSquare, BrainCircuit, Sliders, Timer, TerminalSquare, ListTodo, CheckCircle, Circle, HelpCircle, Award, Hash, Globe, AppWindow, Image as ImageIcon, Info, Headphones, Mic, StickyNote, Send } from "https://esm.sh/lucide-react@0.344.0?bundle";
 
         const firebaseConfig = {
             apiKey: "AIzaSyClIIJkYOmAvEKPtXvG-SIi9SzxQpaBN9s",
@@ -751,6 +751,8 @@
 
             // Voice-to-Text States
             const [isRecording, setIsRecording] = React.useState(false);
+            const [timeLeft, setTimeLeft] = React.useState(25 * 60);
+            const [isTimerAlert, setIsTimerAlert] = React.useState(false);
             const [feedbackPulse, setFeedbackPulse] = React.useState({ active: false, color: 'transparent' });
             const [emojiBurst, setEmojiBurst] = React.useState([]);
             const [streakMessage, setStreakMessage] = React.useState(null);
@@ -758,30 +760,7 @@
             const recognitionRef = React.useRef(null);
             const emojiBurstTimeoutRef = React.useRef(null);
             const baseTextRef = React.useRef("");
-
-            const getStreakMilestone = (streak) => {
-                if (!streak || streak < 5) return null;
-                if (streak >= 20 && streak % 5 === 0) return { text: '🔥 Perfeito! 🔥', tone: 'perfect' };
-                if (streak === 15 || streak === 10) return { text: 'Imbatível 🔥', tone: 'elite' };
-                if (streak === 5) return { text: 'Incrível! 🔥', tone: 'amazing' };
-                return null;
-            };
-
-            const triggerEmojiBurst = () => {
-                const emojiChoices = ['🎉', '✨', '🥳', '🎊', '🔥'];
-                const bursts = Array.from({ length: 12 }, (_, idx) => ({
-                    id: `${Date.now()}-${idx}`,
-                    emoji: emojiChoices[Math.floor(Math.random() * emojiChoices.length)],
-                    x: 12 + Math.random() * 76,
-                    y: 18 + Math.random() * 64,
-                    travelX: -90 + Math.random() * 180,
-                    travelY: -120 + Math.random() * 140
-                }));
-
-                setEmojiBurst(bursts);
-                if (emojiBurstTimeoutRef.current) clearTimeout(emojiBurstTimeoutRef.current);
-                emojiBurstTimeoutRef.current = setTimeout(() => setEmojiBurst([]), 1300);
-            };
+            const INITIAL_FOCUS_TIME = 25 * 60;
 
             const getStreakMilestone = (streak) => {
                 if (!streak || streak < 5) return null;
@@ -870,6 +849,31 @@
                     }
                 };
             }, []);
+
+            React.useEffect(() => {
+                if (finished) return;
+                const timer = setInterval(() => {
+                    setTimeLeft((prev) => {
+                        if (prev <= 1) {
+                            setIsTimerAlert(true);
+                            return 0;
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
+                return () => clearInterval(timer);
+            }, [finished]);
+
+            const formatTimer = (seconds) => {
+                const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const s = (seconds % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            };
+
+            const resetTimer = () => {
+                setTimeLeft(INITIAL_FOCUS_TIME);
+                setIsTimerAlert(false);
+            };
 
             const handleFlip = () => {
                 AudioEngine.play('flip');
@@ -1106,7 +1110,7 @@
                                 <div className="flex items-center gap-2">
                                     <span className="bg-slate-900 px-2 py-1 rounded text-blue-400 border border-slate-800">{card.category}</span>
                                     <span className="text-slate-600">/</span>
-                                    <span className="text-slate-300 truncate max-w-[160px]">{card.lesson || 'Geral'}</span>
+                                    <span className="text-slate-300 truncate max-w-[150px]">{card.lesson || 'Geral'}</span>
                                 </div>
                                 {card.tags && card.tags.length > 0 && (
                                     <div className="flex flex-wrap items-center gap-1 mt-1">

@@ -1861,8 +1861,8 @@
                 const category = normalize(raw.category || raw.subject || 'Geral') || 'Geral';
                 const lesson = normalize(raw.lesson || raw.unit || 'Conteúdo Geral') || 'Conteúdo Geral';
                 const subcategory = normalize(raw.subcategory || raw.topic || 'Geral') || 'Geral';
-                const front = String(raw.front || raw.question || '').trim();
-                const back = String(raw.back || raw.answer || '').trim();
+                const front = sanitizeCardText(raw.front || raw.question || '');
+                const back = sanitizeCardText(raw.back || raw.answer || '');
                 const orderRaw = raw.order ?? raw.position ?? idx;
                 const order = Number.isFinite(Number(orderRaw)) ? Number(orderRaw) : idx;
                 const prerequisiteTopic = normalize(raw.prerequisiteTopic || raw.prerequisitoTopico || raw.topicoPrerequisito || raw.requiredTopic || raw.prerequisite || raw.prerequisito || '');

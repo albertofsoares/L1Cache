@@ -706,6 +706,7 @@
                                     <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500 text-sm">
                                         <option value="All">Todas</option>
                                         <option disabled>──────</option>
+                                        <option value="Sistemas Operacionais">Sistemas Operacionais</option>
                                         {categories.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                 </div>
@@ -751,8 +752,6 @@
 
             // Voice-to-Text States
             const [isRecording, setIsRecording] = React.useState(false);
-            const [timeLeft, setTimeLeft] = React.useState(25 * 60);
-            const [isTimerAlert, setIsTimerAlert] = React.useState(false);
             const [feedbackPulse, setFeedbackPulse] = React.useState({ active: false, color: 'transparent' });
             const [emojiBurst, setEmojiBurst] = React.useState([]);
             const [streakMessage, setStreakMessage] = React.useState(null);
@@ -760,7 +759,6 @@
             const recognitionRef = React.useRef(null);
             const emojiBurstTimeoutRef = React.useRef(null);
             const baseTextRef = React.useRef("");
-            const INITIAL_FOCUS_TIME = 25 * 60;
 
             const getStreakMilestone = (streak) => {
                 if (!streak || streak < 5) return null;
@@ -849,31 +847,6 @@
                     }
                 };
             }, []);
-
-            React.useEffect(() => {
-                if (finished) return;
-                const timer = setInterval(() => {
-                    setTimeLeft((prev) => {
-                        if (prev <= 1) {
-                            setIsTimerAlert(true);
-                            return 0;
-                        }
-                        return prev - 1;
-                    });
-                }, 1000);
-                return () => clearInterval(timer);
-            }, [finished]);
-
-            const formatTimer = (seconds) => {
-                const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-                const s = (seconds % 60).toString().padStart(2, '0');
-                return `${m}:${s}`;
-            };
-
-            const resetTimer = () => {
-                setTimeLeft(INITIAL_FOCUS_TIME);
-                setIsTimerAlert(false);
-            };
 
             const handleFlip = () => {
                 AudioEngine.play('flip');
@@ -1074,10 +1047,11 @@
 
             const getStateBadge = () => {
                 const s = String(currentData.state || 'new').toLowerCase().trim();
-                if(s === 'new') return <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-[10px] uppercase font-bold border border-blue-500/30 whitespace-nowrap shrink-0">Novo</span>
-                if(s === 'learning') return <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-[10px] uppercase font-bold border border-orange-500/30 whitespace-nowrap shrink-0">Aprendendo</span>
-                if(s === 'review') return <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-[10px] uppercase font-bold border border-emerald-500/30 whitespace-nowrap shrink-0">Revisão</span>
-                if(s === 'relearning') return <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded text-[10px] uppercase font-bold border border-red-500/30 whitespace-nowrap shrink-0">Reaprender</span>
+                const baseClass = "flex items-center justify-center px-2 py-1 rounded text-[10px] uppercase font-bold border whitespace-nowrap shrink-0 h-7";
+                if(s === 'new') return <div className={`${baseClass} bg-blue-500/20 text-blue-400 border-blue-500/30`}>Novo</div>
+                if(s === 'learning') return <div className={`${baseClass} bg-orange-500/20 text-orange-400 border-orange-500/30`}>Aprendendo</div>
+                if(s === 'review') return <div className={`${baseClass} bg-emerald-500/20 text-emerald-400 border-emerald-500/30`}>Revisão</div>
+                if(s === 'relearning') return <div className={`${baseClass} bg-red-500/20 text-red-400 border-red-500/30`}>Reaprender</div>
                 return null;
             }
 
@@ -1103,55 +1077,63 @@
                         )}
                     </div>
 
-                    {/* CABEÇALHO REESTRUTURADO CIRURGICAMENTE (LADO A LADO / SEM QUEBRA) */}
+                    {/* CABEÇALHO REESTRUTURADO CIRURGICAMENTE E ALINHADO */}
                     <div className="flex items-center justify-between text-xs text-slate-500 uppercase tracking-widest mb-4 px-2 w-full flex-nowrap overflow-x-auto custom-scrollbar pb-2 gap-4">
                         
-                        {/* Bloco Esquerdo: Desfazer + Matéria / Aula / Tags */}
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <button onClick={handleUndo} disabled={index === 0} title="Desfazer (Ctrl+Z)" className={`flex items-center gap-1 transition-colors shrink-0 mr-1 ${index === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`}>
+                        {/* Bloco Esquerdo: Desfazer + Matéria */}
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button onClick={handleUndo} disabled={index === 0} title="Desfazer (Ctrl+Z)" className={`flex items-center gap-1 transition-colors shrink-0 h-7 ${index === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`}>
                                 <Undo2 size={16} /> <span className="hidden sm:inline">Desfazer</span>
                             </button>
 
                             <div className="h-4 w-px bg-slate-700 hidden sm:block shrink-0 mx-1"></div>
 
-                            <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="bg-slate-900 px-2 py-1 rounded text-blue-400 border border-slate-800 truncate shrink" title={card.category}>{card.category}</span>
-                                <span className="text-slate-600 shrink-0">/</span>
-                                <span className="text-slate-300 truncate shrink" title={card.lesson || 'Geral'}>{card.lesson || 'Geral'}</span>
-
-                                {card.tags && card.tags.length > 0 && (
-                                    <div className="hidden lg:flex items-center gap-1 shrink-0 ml-1">
-                                        {card.tags.map(t => (
-                                            <span key={t} className="bg-purple-900/30 text-purple-400 px-1.5 py-0.5 rounded text-[9px] border border-purple-500/30 flex items-center gap-0.5 whitespace-nowrap"><Tag size={8}/> {t}</span>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            <span className="bg-slate-900 px-2 py-1 rounded text-blue-400 border border-slate-800 flex items-center h-7 whitespace-nowrap text-[10px] font-bold" title={card.category}>{card.category}</span>
                         </div>
 
-                        {/* Bloco Direito: Timer + Status + Streak + Restantes */}
-                        <div className="flex items-center gap-2 shrink-0">
-                            <div onClick={resetTimer} className={`flex items-center gap-1.5 px-2 py-1 rounded border font-mono font-bold cursor-pointer transition-colors whitespace-nowrap shrink-0 ${isTimerAlert ? 'bg-red-500/20 text-red-400 border-red-500/50 animate-pulse' : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white'}`} title="Focus Timer (Clique para resetar)">
-                                <Timer size={14} />
-                                <span>{formatTimer(timeLeft)}</span>
+                        {/* Bloco Direito: Aula/Tópico + Tags + Status + Streak + Restantes */}
+                        <div className="flex items-center gap-2 shrink-0 ml-auto">
+                            
+                            {/* AULA E TÓPICO COMPLETOS NO LUGAR DO TIMER */}
+                            <div className="flex items-center gap-1.5 bg-slate-800/50 px-2 py-1 rounded border border-slate-700 h-7 whitespace-nowrap text-slate-300 font-bold text-[10px] uppercase">
+                                <BookOpen size={12} className="text-slate-500" />
+                                <span>{card.lesson || 'Geral'}</span>
+                                {card.subcategory && card.subcategory !== 'Geral' && (
+                                    <>
+                                        <span className="text-slate-600">/</span>
+                                        <span className="text-slate-400">{card.subcategory}</span>
+                                    </>
+                                )}
                             </div>
 
-                            {getStateBadge()}
-
-                            {displayedStreak > 0 && (
-                                <div className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] leading-none uppercase font-bold border whitespace-nowrap shrink-0 ${isStreakLocked ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-orange-500 bg-orange-500/10 border-orange-500/20 animate-pulse-slow'}`} title={isStreakLocked ? 'Streak Protegido' : 'Streak Ativo'}>
-                                    <Flame size={13} /> {displayedStreak}
+                            {/* TAGS DA AULA AGORA VISÍVEIS DE FORMA EXPLÍCITA */}
+                            {card.tags && card.tags.length > 0 && (
+                                <div className="flex items-center gap-1 shrink-0 h-7">
+                                    {card.tags.map(t => (
+                                        <span key={t} className="bg-purple-900/30 text-purple-400 px-2 py-1 rounded text-[10px] border border-purple-500/30 flex items-center gap-1 whitespace-nowrap h-7 uppercase font-bold">
+                                            <Tag size={10}/> {t}
+                                        </span>
+                                    ))}
                                 </div>
                             )}
 
-                            <div className="flex items-center gap-1.5 font-mono whitespace-nowrap shrink-0 bg-slate-900 px-2 py-1 rounded border border-slate-800 text-slate-400">
-                                <Layers size={14} className="text-slate-600"/>
-                                <span className="hidden sm:inline">{queue.length - index} restantes</span>
-                                <span className="sm:hidden">{queue.length - index} rest.</span>
+                            {/* STATUS, STREAK E RESTANTES PADRONIZADOS EM ALTURA (h-7) E FONTE (text-[10px]) */}
+                            {getStateBadge()}
+
+                            {displayedStreak > 0 && (
+                                <div className={`flex items-center justify-center gap-1 px-2 py-1 rounded text-[10px] uppercase font-bold border whitespace-nowrap shrink-0 h-7 ${isStreakLocked ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-orange-500 bg-orange-500/10 border-orange-500/20 animate-pulse-slow'}`} title={isStreakLocked ? 'Streak Protegido' : 'Streak Ativo'}>
+                                    <Flame size={12} /> {displayedStreak}
+                                </div>
+                            )}
+
+                            <div className="flex items-center justify-center gap-1.5 font-mono whitespace-nowrap shrink-0 bg-slate-900 px-2 py-1 rounded border border-slate-800 text-slate-400 text-[10px] uppercase font-bold h-7">
+                                <Layers size={12} className="text-slate-600"/>
+                                <span className="hidden sm:inline">{queue.length - index} rest.</span>
+                                <span className="sm:hidden">{queue.length - index}</span>
                             </div>
                         </div>
                     </div>
-                    {/* FIM DO CABEÇALHO REESTRUTURADO */}
+                    {/* FIM DO CABEÇALHO REESTRUTURADO E ALINHADO */}
 
                     <div className="relative flex-1 group z-10 flex flex-col">
                         {emojiBurst.map((item) => (

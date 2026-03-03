@@ -103,6 +103,29 @@
             text-shadow: 0 0 14px rgba(167, 139, 250, 0.35);
         }
 
+        .emoji-jackpot {
+            position: absolute;
+            font-size: 1.45rem;
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.35));
+            animation: emojiJackpotFloat 1.2s ease-out forwards;
+            z-index: 40;
+            pointer-events: none;
+        }
+
+        @keyframes emojiJackpotFloat {
+            0% {
+                transform: translate(-50%, -50%) scale(0.7);
+                opacity: 0;
+            }
+            18% {
+                opacity: 1;
+            }
+            100% {
+                transform: translate(calc(-50% + var(--travel-x, 0px)), calc(-50% + var(--travel-y, -70px))) scale(1.2);
+                opacity: 0;
+            }
+        }
+
         @keyframes liveReviewScan {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -729,10 +752,37 @@
             const [timeLeft, setTimeLeft] = React.useState(25 * 60);
             const [isTimerAlert, setIsTimerAlert] = React.useState(false);
             const [feedbackPulse, setFeedbackPulse] = React.useState({ active: false, color: 'transparent' });
+            const [emojiBurst, setEmojiBurst] = React.useState([]);
+            const [streakMessage, setStreakMessage] = React.useState(null);
             
             const recognitionRef = React.useRef(null);
+            const emojiBurstTimeoutRef = React.useRef(null);
             const baseTextRef = React.useRef("");
             const INITIAL_FOCUS_TIME = 25 * 60;
+
+            const getStreakMilestone = (streak) => {
+                if (!streak || streak < 5) return null;
+                if (streak >= 20 && streak % 5 === 0) return { text: '🔥 Perfeito! 🔥', tone: 'perfect' };
+                if (streak === 15 || streak === 10) return { text: 'Imbatível 🔥', tone: 'elite' };
+                if (streak === 5) return { text: 'Incrível! 🔥', tone: 'amazing' };
+                return null;
+            };
+
+            const triggerEmojiBurst = () => {
+                const emojiChoices = ['🎉', '✨', '🥳', '🎊', '🔥'];
+                const bursts = Array.from({ length: 12 }, (_, idx) => ({
+                    id: `${Date.now()}-${idx}`,
+                    emoji: emojiChoices[Math.floor(Math.random() * emojiChoices.length)],
+                    x: 12 + Math.random() * 76,
+                    y: 18 + Math.random() * 64,
+                    travelX: -90 + Math.random() * 180,
+                    travelY: -120 + Math.random() * 140
+                }));
+
+                setEmojiBurst(bursts);
+                if (emojiBurstTimeoutRef.current) clearTimeout(emojiBurstTimeoutRef.current);
+                emojiBurstTimeoutRef.current = setTimeout(() => setEmojiBurst([]), 1300);
+            };
 
             const progress = queue.length > 0 ? ((index) / queue.length) * 100 : 100;
 
@@ -791,6 +841,9 @@
                 return () => {
                     if (recognitionRef.current) {
                         recognitionRef.current.stop();
+                    }
+                    if (emojiBurstTimeoutRef.current) {
+                        clearTimeout(emojiBurstTimeoutRef.current);
                     }
                 };
             }, []);
@@ -864,6 +917,7 @@
                 // Hook Model: Reforço Variável (20% chance de "Jackpot" de dopamina em respostas corretas/fáceis)
                 if ((rating === 3 || rating === 4) && Math.random() < 0.20) {
                     soundType = 'level-up';
+                    triggerEmojiBurst();
                     if (window.confetti) {
                         window.confetti({
                             particleCount: 150,
@@ -919,6 +973,9 @@
                     } else {
                         updatedStats.currentStreak = 0;
                     }
+
+                    const milestone = getStreakMilestone(updatedStats.currentStreak || 0);
+                    setStreakMessage(milestone);
 
                     updatedStats.retention = (updatedStats.correctAnswers / updatedStats.cardsSeen) * 100;
                     updatedStats.maxStreak = Math.max(updatedStats.maxStreak || 0, updatedStats.currentStreak || 0);
@@ -1012,6 +1069,14 @@
 
                     <div className="w-full h-1 bg-slate-800 rounded-full mb-4 overflow-hidden"><div className="h-full bg-blue-500 transition-all duration-500 ease-out shadow-[0_0_10px_#3b82f6]" style={{ width: `${progress}%` }}></div></div>
 
+                    <div className="min-h-[26px] mb-2 flex items-center justify-center">
+                        {streakMessage && (
+                            <div className={`px-4 py-1 rounded-full border text-sm font-bold tracking-wide animate-fade-in ${streakMessage.tone === 'perfect' ? 'bg-amber-500/15 border-amber-400/40 text-amber-300' : streakMessage.tone === 'elite' ? 'bg-orange-500/15 border-orange-400/40 text-orange-300' : 'bg-blue-500/15 border-blue-400/40 text-blue-300'}`}>
+                                {streakMessage.text}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex justify-between items-center text-xs text-slate-500 uppercase tracking-widest mb-4 px-2">
                         <div className="flex items-center gap-4">
                             <button onClick={handleUndo} disabled={index === 0} title="Desfazer (Ctrl+Z)" className={`flex items-center gap-1 transition-colors ${index === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`}><Undo2 size={16} /> <span className="hidden sm:inline">Desfazer</span></button>
@@ -1046,6 +1111,20 @@
                     </div>
 
                     <div className="relative flex-1 group z-10 flex flex-col">
+                        {emojiBurst.map((item) => (
+                            <span
+                                key={item.id}
+                                className="emoji-jackpot"
+                                style={{
+                                    left: `${item.x}%`,
+                                    top: `${item.y}%`,
+                                    '--travel-x': `${item.travelX}px`,
+                                    '--travel-y': `${item.travelY}px`
+                                }}
+                            >
+                                {item.emoji}
+                            </span>
+                        ))}
                         <div
                             className={`w-full flex-1 duration-500 transform-style-3d transition-all relative rounded-3xl ${isFlipped ? 'rotate-y-180' : ''}`}
                             style={{

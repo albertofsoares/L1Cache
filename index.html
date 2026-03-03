@@ -1074,10 +1074,10 @@
 
             const getStateBadge = () => {
                 const s = String(currentData.state || 'new').toLowerCase().trim();
-                if(s === 'new') return <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-blue-500/30">Novo</span>
-                if(s === 'learning') return <span className="bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-orange-500/30">Aprendendo</span>
-                if(s === 'review') return <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-emerald-500/30">Revisão</span>
-                if(s === 'relearning') return <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold border border-red-500/30">Reaprender</span>
+                if(s === 'new') return <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-[10px] uppercase font-bold border border-blue-500/30 whitespace-nowrap">Novo</span>
+                if(s === 'learning') return <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-[10px] uppercase font-bold border border-orange-500/30 whitespace-nowrap">Aprendendo</span>
+                if(s === 'review') return <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-[10px] uppercase font-bold border border-emerald-500/30 whitespace-nowrap">Revisão</span>
+                if(s === 'relearning') return <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded text-[10px] uppercase font-bold border border-red-500/30 whitespace-nowrap">Reaprender</span>
                 return null;
             }
 
@@ -1103,38 +1103,51 @@
                         )}
                     </div>
 
-                    <div className="flex justify-between items-center text-xs text-slate-500 uppercase tracking-widest mb-4 px-2">
-                        <div className="flex items-center gap-4">
-                            <button onClick={handleUndo} disabled={index === 0} title="Desfazer (Ctrl+Z)" className={`flex items-center gap-1 transition-colors ${index === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`}><Undo2 size={16} /> <span className="hidden sm:inline">Desfazer</span></button>
-                            <div className="flex flex-col items-start">
-                                <div className="flex items-center gap-2">
-                                    <span className="bg-slate-900 px-2 py-1 rounded text-blue-400 border border-slate-800">{card.category}</span>
-                                    <span className="text-slate-600">/</span>
-                                    <span className="text-slate-300 truncate max-w-[150px]">{card.lesson || 'Geral'}</span>
+                    {/* CABEÇALHO REESTRUTURADO CIRURGICAMENTE (FLEX-WRAP / GAP / SEM SOBREPOSIÇÃO) */}
+                    <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-2 text-xs text-slate-500 uppercase tracking-widest mb-4 px-2 w-full">
+                        
+                        {/* Bloco Esquerdo: Desfazer + Matéria / Aula / Tags */}
+                        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[50%] shrink-0">
+                            <button onClick={handleUndo} disabled={index === 0} title="Desfazer (Ctrl+Z)" className={`flex items-center gap-1 transition-colors shrink-0 mr-1 ${index === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`}>
+                                <Undo2 size={16} /> <span className="hidden sm:inline">Desfazer</span>
+                            </button>
+
+                            <div className="h-4 w-px bg-slate-700 hidden sm:block shrink-0"></div>
+
+                            <span className="bg-slate-900 px-2 py-1 rounded text-blue-400 border border-slate-800 truncate max-w-[120px] sm:max-w-[200px] shrink-0" title={card.category}>{card.category}</span>
+                            <span className="text-slate-600 shrink-0">/</span>
+                            <span className="text-slate-300 truncate max-w-[120px] sm:max-w-[200px] shrink-0" title={card.lesson || 'Geral'}>{card.lesson || 'Geral'}</span>
+
+                            {card.tags && card.tags.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1 shrink-0 ml-1">
+                                    {card.tags.map(t => (
+                                        <span key={t} className="bg-purple-900/30 text-purple-400 px-1.5 py-0.5 rounded text-[9px] border border-purple-500/30 flex items-center gap-0.5 whitespace-nowrap"><Tag size={8}/> {t}</span>
+                                    ))}
                                 </div>
-                                {card.tags && card.tags.length > 0 && (
-                                    <div className="flex flex-wrap items-center gap-1 mt-1">
-                                        {card.tags.map(t => (
-                                            <span key={t} className="bg-purple-900/30 text-purple-400 px-1.5 py-0.5 rounded text-[9px] border border-purple-500/30 flex items-center gap-0.5"><Tag size={8}/> {t}</span>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            )}
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 pl-1">
+
+                        {/* Bloco Direito: Timer + Status + Streak + Restantes */}
+                        <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end shrink-0">
                             <div onClick={resetTimer} className={`flex items-center gap-1.5 px-2 py-1 rounded border font-mono font-bold cursor-pointer transition-colors whitespace-nowrap ${isTimerAlert ? 'bg-red-500/20 text-red-400 border-red-500/50 animate-pulse' : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white'}`} title="Focus Timer (Clique para resetar)">
                                 <Timer size={14} />
                                 {formatTimer(timeLeft)}
                             </div>
+
                             {getStateBadge()}
+
                             {displayedStreak > 0 && (
-                                <div className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs sm:text-[11px] leading-none uppercase font-bold border whitespace-nowrap ${isStreakLocked ? 'text-rose-300 bg-rose-500/10 border-rose-400/30' : 'text-orange-500 bg-orange-500/10 border-orange-500/20 animate-pulse-slow'}`}>
-                                    <Flame size={13} /> Streak: {displayedStreak} {isStreakLocked ? '(Travado)' : ''}
+                                <div className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] leading-none uppercase font-bold border whitespace-nowrap ${isStreakLocked ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-orange-500 bg-orange-500/10 border-orange-500/20 animate-pulse-slow'}`} title={isStreakLocked ? 'Streak Protegido' : 'Streak Ativo'}>
+                                    <Flame size={13} /> {displayedStreak}
                                 </div>
                             )}
-                            <div className="flex items-center gap-1.5 font-mono whitespace-nowrap"><Layers size={14} className="text-slate-600"/><span>{queue.length - index} restantes</span></div>
+
+                            <div className="flex items-center gap-1.5 font-mono whitespace-nowrap bg-slate-900 px-2 py-1 rounded border border-slate-800 text-slate-400">
+                                <Layers size={14} className="text-slate-600"/><span>{queue.length - index} restantes</span>
+                            </div>
                         </div>
                     </div>
+                    {/* FIM DO CABEÇALHO REESTRUTURADO */}
 
                     <div className="relative flex-1 group z-10 flex flex-col">
                         {emojiBurst.map((item) => (

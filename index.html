@@ -713,21 +713,20 @@
 
             // Voice-to-Text States
             const [isRecording, setIsRecording] = React.useState(false);
+            const [timeLeft, setTimeLeft] = React.useState(25 * 60);
+            const [isTimerAlert, setIsTimerAlert] = React.useState(false);
+            const [feedbackPulse, setFeedbackPulse] = React.useState({ active: false, color: 'transparent' });
+            
             const recognitionRef = React.useRef(null);
             const baseTextRef = React.useRef("");
+            const INITIAL_FOCUS_TIME = 25 * 60;
 
-            const INITIAL_FOCUS_TIME = 25 * 60; // 25 Minutos
-            const [timeLeft, setTimeLeft] = React.useState(INITIAL_FOCUS_TIME);
-            const [isTimerAlert, setIsTimerAlert] = React.useState(false);
-
-            const [feedbackPulse, setFeedbackPulse] = React.useState({ active: false, color: 'transparent' });
             const progress = queue.length > 0 ? ((index) / queue.length) * 100 : 100;
 
             const currentAlgorithm = userStats?.algorithm || 'sm2';
             const currentRetention = userStats?.fsrsRetention || 0.90;
             const currentLearningProfile = userStats?.learningProfile || 'standard';
 
-            // Voice Dictation Logic (Técnica Feynman)
             const toggleDictation = () => {
                 if (isRecording) {
                     recognitionRef.current?.stop();
@@ -746,7 +745,6 @@
                 recognition.interimResults = true;
                 recognition.lang = 'pt-BR';
 
-                // Captura o texto que já foi digitado manualmente
                 baseTextRef.current = scratchpadText;
 
                 recognition.onstart = () => setIsRecording(true);
@@ -756,8 +754,6 @@
                     for (let i = 0; i < event.results.length; i++) {
                         sessionTranscript += event.results[i][0].transcript;
                     }
-
-                    // Adiciona um espaço de forma inteligente se não houver um no final do texto base
                     const space = baseTextRef.current && !baseTextRef.current.endsWith(' ') && !baseTextRef.current.endsWith('\n') ? ' ' : '';
                     setScratchpadText(baseTextRef.current + space + sessionTranscript);
                 };
@@ -778,7 +774,6 @@
                 }
             };
 
-            // Para o reconhecimento de voz ao desmontar ou trocar de card
             React.useEffect(() => {
                 return () => {
                     if (recognitionRef.current) {
@@ -832,7 +827,6 @@
                 setCardStartTime(Date.now());
             };
 
-            // Anti-Conflito de Digitação: Desliga o mic se você voltar a digitar mecanicamente
             const handleScratchpadChange = (e) => {
                 if (isRecording) {
                     recognitionRef.current?.stop();
@@ -1330,6 +1324,28 @@
                 return () => unsub();
             }, []);
 
+            // FUNÇÃO PARA RENDERIZAR A BOLHA DE PROGRESSO
+            const getRetentionBubble = (value) => {
+                const num = Number(value) || 0;
+                let colors = "";
+                
+                if (num < 30) {
+                    colors = "bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_8px_rgba(239,68,68,0.2)]";
+                } else if (num < 60) {
+                    colors = "bg-orange-500/20 text-orange-400 border-orange-500/30 shadow-[0_0_8px_rgba(249,115,22,0.2)]";
+                } else {
+                    colors = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]";
+                }
+
+                return (
+                    <div className="flex justify-center">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full border text-[11px] md:text-xs font-bold transition-all ${colors}`}>
+                            {num.toFixed(1)}%
+                        </span>
+                    </div>
+                );
+            };
+
             const sortedDaily = [...leaders].sort((a,b) => (b.cardsSeenToday - a.cardsSeenToday) || (b.retention - a.retention)).slice(0, 50);
             const sortedMonthly = [...leaders].sort((a,b) => (b.monthlyCards - a.monthlyCards) || (b.monthlyRetention - a.monthlyRetention)).slice(0, 50);
             const sortedQuizzes = [...leaders].sort((a,b) => (b.quizStats?.correctAnswers || 0) - (a.quizStats?.correctAnswers || 0) || (b.quizStats?.questionsSeen || 0) - (a.quizStats?.questionsSeen || 0)).slice(0, 50);
@@ -1397,7 +1413,7 @@
                                         <td className="p-4 md:p-5 text-center text-blue-400 font-mono font-bold">{l.cardsSeenToday.toLocaleString('pt-BR')}</td>
                                         <td className="p-4 md:p-5 text-center text-slate-300 font-mono text-sm">{formatDuration(l.timeStudiedToday)}</td>
                                         <td className="p-4 md:p-5 text-center text-orange-400 font-bold">{l.currentStreak}</td>
-                                        <td className="p-4 md:p-5 text-center text-emerald-400 font-bold">{l.retention ? l.retention.toFixed(1) : 0}%</td>
+                                        <td className="p-4 md:p-5 text-center">{getRetentionBubble(l.retention)}</td>
                                         <td className="p-4 md:p-5 text-center text-slate-400 font-mono text-sm">{calculateLast31Days(l.dailyActivity).toLocaleString('pt-BR')}</td>
                                         {isAdmin && <td className="p-4 md:p-5 text-center"><button onClick={() => handleDeleteUser(l.id, l.email)} className="text-slate-500 hover:text-red-500"><Trash2 size={16} /></button></td>}
                                     </tr>
@@ -1410,7 +1426,7 @@
                                         <td className="p-4 md:p-5 text-center text-blue-400 font-mono font-bold">{l.monthlyCards.toLocaleString('pt-BR')}</td>
                                         <td className="p-4 md:p-5 text-center text-slate-300 font-mono text-sm">{formatDuration(l.monthlyTime)}</td>
                                         <td className="p-4 md:p-5 text-center text-orange-400 font-bold">{l.maxStreak || l.currentStreak || 0}</td>
-                                        <td className="p-4 md:p-5 text-center text-emerald-400 font-bold">{(l.maxRetention || l.monthlyRetention || 0).toFixed(1)}%</td>
+                                        <td className="p-4 md:p-5 text-center">{getRetentionBubble(l.maxRetention || l.monthlyRetention || 0)}</td>
                                         {isAdmin && <td className="p-4 md:p-5 text-center"><button onClick={() => handleDeleteUser(l.id, l.email)} className="text-slate-500 hover:text-red-500"><Trash2 size={16} /></button></td>}
                                     </tr>
                                 ))}
@@ -1427,7 +1443,7 @@
                                             <td className="p-4 md:p-5 text-center text-blue-400 font-mono font-bold">{questionsSeen.toLocaleString('pt-BR')}</td>
                                             <td className="p-4 md:p-5 text-center text-emerald-400 font-mono font-bold">{hits.toLocaleString('pt-BR')}</td>
                                             <td className="p-4 md:p-5 text-center text-purple-400 font-mono font-bold">{(l.quizStats?.examsTaken || 0).toLocaleString('pt-BR')}</td>
-                                            <td className="p-4 md:p-5 text-center text-yellow-400 font-bold">{accuracy.toFixed(1)}%</td>
+                                            <td className="p-4 md:p-5 text-center">{getRetentionBubble(accuracy)}</td>
                                             {isAdmin && <td className="p-4 md:p-5 text-center"><button onClick={() => handleDeleteUser(l.id, l.email)} className="text-slate-500 hover:text-red-500"><Trash2 size={16} /></button></td>}
                                         </tr>
                                     );

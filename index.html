@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nosso Site</title>
     <link rel="icon" href="https://cdn-icons-png.flaticon.com/128/4696/4696916.png">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <meta name="theme-color" content="#020617">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -147,8 +149,8 @@
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, updateDoc, serverTimestamp, query, onSnapshot, writeBatch, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, ArrowLeftRight, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag, Network, ListChecks, CheckSquare, BrainCircuit, Sliders, Timer, TerminalSquare, ListTodo, CheckCircle, Circle, HelpCircle, Award, Hash, Globe, AppWindow, Image as ImageIcon, Info, Headphones, Mic, StickyNote, Send } from "https://esm.sh/lucide-react@0.344.0?bundle";
+        import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, updateDoc, serverTimestamp, query, onSnapshot, writeBatch, orderBy, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, ArrowLeftRight, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag, Network, ListChecks, CheckSquare, BrainCircuit, Sliders, Timer, TerminalSquare, ListTodo, CheckCircle, Circle, HelpCircle, Award, Hash, Globe, AppWindow, Download, Image as ImageIcon, Info, Headphones, Mic, StickyNote, Send } from "https://esm.sh/lucide-react@0.344.0?bundle";
 
         const firebaseConfig = {
             apiKey: "AIzaSyClIIJkYOmAvEKPtXvG-SIi9SzxQpaBN9s",
@@ -162,6 +164,10 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        enableIndexedDbPersistence(db).catch((err) => {
+            console.warn('Não foi possível ativar persistência offline do Firestore:', err?.message || err);
+        });
 
         const normalize = (val) => String(val || '').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
         const escapeHtml = (value) => String(value || '')
@@ -2774,6 +2780,12 @@
             const [quizQueue, setQuizQueue] = React.useState([]);
             const [customStudyOpen, setCustomStudyOpen] = React.useState(false);
             const [settingsOpen, setSettingsOpen] = React.useState(false);
+            const [installPrompt, setInstallPrompt] = React.useState(null);
+            const [isInstallable, setIsInstallable] = React.useState(false);
+            const [showInstallGuide, setShowInstallGuide] = React.useState(false);
+            const [isStandalone, setIsStandalone] = React.useState(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
+            const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
+            const isSafari = /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent || '');
 
             // Controle Global do Ruído Marrom
             const [isNoiseActive, setIsNoiseActive] = React.useState(false);
@@ -2800,6 +2812,28 @@
 
                 return () => unsubAuth();
             }, [isNoiseActive]);
+
+            React.useEffect(() => {
+                const handleBeforeInstallPrompt = (event) => {
+                    event.preventDefault();
+                    setInstallPrompt(event);
+                    setIsInstallable(true);
+                };
+
+                const handleInstalled = () => {
+                    setInstallPrompt(null);
+                    setIsInstallable(false);
+                    setIsStandalone(true);
+                };
+
+                window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+                window.addEventListener('appinstalled', handleInstalled);
+
+                return () => {
+                    window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+                    window.removeEventListener('appinstalled', handleInstalled);
+                };
+            }, []);
 
             React.useEffect(() => {
                 if (!user) return;
@@ -3097,6 +3131,20 @@
 
             const displayTitle = siteSettings.title || "Nosso Site";
 
+            const handleInstallApp = async () => {
+                if (!installPrompt) {
+                    setShowInstallGuide(true);
+                    return;
+                }
+
+                installPrompt.prompt();
+                const choice = await installPrompt.userChoice;
+                if (choice.outcome === 'accepted') {
+                    setIsInstallable(false);
+                }
+                setInstallPrompt(null);
+            };
+
             return (
                 <div className="min-h-screen flex flex-col bg-slate-950 text-slate-200 font-sans selection:bg-purple-500/30">
                     <nav className="border-b border-slate-800 bg-slate-950/80 sticky top-0 z-50 backdrop-blur-md">
@@ -3131,6 +3179,14 @@
 
                                 <button onClick={() => setView("postits")} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${view === 'postits' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 'text-slate-400 bg-slate-900 border-slate-800 hover:text-blue-400 hover:bg-slate-800'}`}><StickyNote size={14} /> Post-Its</button>
 
+                                {!isStandalone && (
+                                    <button onClick={handleInstallApp} className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${isInstallable ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-emerald-400 hover:bg-slate-800'}`} title={isInstallable ? 'Instalar aplicativo' : 'Como instalar o app'}>
+                                        {isInstallable ? <Download size={14} /> : <Info size={14} />}
+                                        <span className="hidden sm:inline">{isInstallable ? 'Baixar app' : 'Como instalar'}</span>
+                                        <span className="sm:hidden">{isInstallable ? 'Instalar' : 'Ajuda'}</span>
+                                    </button>
+                                )}
+
                                 {isAdmin && <button onClick={() => setView("admin")} className="text-amber-500 hover:text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20 transition-all flex items-center gap-1.5 text-sm"><Lock size={14} /> Admin</button>}
                                 {user && <button onClick={() => setSettingsOpen(true)} className="text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800" title="Configurações (Engine)"><Settings size={20}/></button>}
                                 {user ? <button onClick={() => signOut(auth)} className="text-slate-400 hover:text-red-400 transition-colors p-2" title="Sair"><LogOut size={20}/></button> : null}
@@ -3158,6 +3214,31 @@
 
                                 <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} userStats={userStats} setUserStats={setUserStats} user={user} />
                                 <CustomStudyModal isOpen={customStudyOpen} onClose={() => setCustomStudyOpen(false)} onStart={startCustomStudy} categories={[...new Set(cards.map(c => normalize(c.category)))]} tags={allTags} />
+
+                                {showInstallGuide && (
+                                    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowInstallGuide(false)}>
+                                        <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+                                            <div className="flex items-start gap-3">
+                                                <div className="mt-0.5 rounded-full bg-blue-500/20 p-2 text-blue-400"><Info size={18} /></div>
+                                                <div>
+                                                    <h3 className="text-white font-bold text-lg">Como instalar o aplicativo</h3>
+                                                    <p className="text-slate-300 text-sm mt-2">A instalação automática aparece quando o navegador considera o site elegível.</p>
+                                                </div>
+                                            </div>
+
+                                            <ul className="mt-4 space-y-2 text-sm text-slate-300 list-disc pl-5">
+                                                <li>Abra este site em <strong>HTTPS</strong> (ex.: GitHub Pages já atende).</li>
+                                                <li>Use Chrome ou Edge atualizados e navegue alguns segundos na página.</li>
+                                                <li>Se o botão mudar para <strong>Baixar app</strong>, clique para instalar.</li>
+                                                {(isIOS || isSafari) && <li>No iPhone/Safari: toque em <strong>Compartilhar</strong> e depois em <strong>Adicionar à Tela de Início</strong>.</li>}
+                                            </ul>
+
+                                            <div className="mt-5 flex justify-end">
+                                                <button className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold" onClick={() => setShowInstallGuide(false)}>Entendi</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -3179,6 +3260,15 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<ErrorBoundary><App /></ErrorBoundary>);
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch((err) => {
+                    console.warn('Falha ao registrar Service Worker:', err);
+                });
+            });
+        }
     </script>
 </body>
 </html>

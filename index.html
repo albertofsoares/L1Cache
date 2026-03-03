@@ -71,6 +71,9 @@
         .prose-left { text-align: left; }
         .prose-left ul { display: block; }
 
+        .study-prompt-html :is(p, div, li, h1, h2, h3, h4, h5, h6, pre, blockquote) { display: inline; margin: 0; }
+        .study-prompt-html br { display: none; }
+
         .glass { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 
@@ -138,6 +141,23 @@
         const db = getFirestore(app);
 
         const normalize = (val) => String(val || '').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
+        const normalizeStudyPromptHtml = (html) => {
+            const raw = String(html || '').trim();
+            if (!raw || typeof document === 'undefined') return raw;
+
+            const container = document.createElement('div');
+            container.innerHTML = raw;
+
+            container.querySelectorAll('br').forEach((el) => el.replaceWith(' '));
+            container.querySelectorAll('p,div,li,h1,h2,h3,h4,h5,h6,pre,blockquote,section,article').forEach((el) => {
+                const fragment = document.createDocumentFragment();
+                while (el.firstChild) fragment.appendChild(el.firstChild);
+                fragment.appendChild(document.createTextNode(' '));
+                el.replaceWith(fragment);
+            });
+
+            return container.innerHTML.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+        };
         const isCardUnlocked = (card, allCards, reviews) => {
             const prerequisiteTopic = normalize(card?.prerequisiteTopic || '');
             if (!prerequisiteTopic) return true;
@@ -1014,7 +1034,7 @@
                                 <div className="absolute top-4 right-4 text-slate-600 hover:text-blue-400 cursor-pointer transition-colors z-20" title="Ouvir Pergunta" onClick={(e) => { e.stopPropagation(); speakText(card.front); }}><Volume2 size={24} /></div>
 
                                 <div className="w-full max-h-[50%] overflow-y-auto custom-scrollbar px-2 mb-4 pb-4 border-b border-slate-800">
-                                    <div className="prose prose-invert prose-lg font-medium text-white select-text w-full max-w-none leading-relaxed break-words text-center flex flex-col items-center justify-center" dangerouslySetInnerHTML={{__html: card.front || ''}}></div>
+                                    <div className="prose prose-invert prose-lg font-medium text-white select-text w-full max-w-none leading-relaxed break-words text-center study-prompt-html" dangerouslySetInnerHTML={{__html: normalizeStudyPromptHtml(card.front)}}></div>
                                 </div>
 
                                 <div className="flex-1 flex flex-col">
@@ -1048,7 +1068,7 @@
 
                                 <div className="w-full border-b border-slate-800/80 pb-4 mb-4 text-center shrink-0">
                                     <span className="text-[10px] uppercase text-slate-600 font-bold tracking-widest block mb-1">Contexto (Pergunta)</span>
-                                    <div className="text-sm text-slate-400 opacity-70 line-clamp-2 px-4" dangerouslySetInnerHTML={{__html: card.front}}></div>
+                                    <div className="text-sm text-slate-400 opacity-70 line-clamp-2 px-4 study-prompt-html" dangerouslySetInnerHTML={{__html: normalizeStudyPromptHtml(card.front)}}></div>
                                 </div>
 
                                 <div className="flex-1 w-full overflow-y-auto custom-scrollbar px-2 flex flex-col gap-6">
@@ -1061,7 +1081,7 @@
 
                                     <div className="w-full">
                                         <span className="text-[10px] uppercase text-blue-500/50 font-bold tracking-widest block mb-2 text-center">Resposta Gabarito:</span>
-                                        <div className="prose prose-invert prose-lg text-slate-200 w-full max-w-none text-center select-text leading-relaxed break-words flex flex-col items-center justify-center" dangerouslySetInnerHTML={{__html: card.back || ''}}></div>
+                                        <div className="prose prose-invert prose-lg text-slate-200 w-full max-w-none text-center select-text leading-relaxed break-words" dangerouslySetInnerHTML={{__html: card.back || ''}}></div>
                                     </div>
                                 </div>
                             </div>
@@ -1676,7 +1696,7 @@
                         }
                         if (tagsChanged) updateData.tags = currentTags;
                         if (Object.keys(updateData).length > 0) {
-                            batch.update(doc(db, "cards", cardId), updateData);
+                            batch.set(doc(db, "cards", cardId), updateData, { merge: true });
                             processedCount++;
                         }
                     });
@@ -2551,7 +2571,7 @@
                     <div className="glass flex-1 rounded-3xl border border-slate-700 p-6 md:p-10 flex flex-col shadow-2xl bg-slate-900">
 
                         <div className="mb-8 w-full">
-                            <div className="prose prose-invert prose-lg font-medium text-white select-text w-full max-w-none leading-relaxed break-words text-center flex flex-col items-center justify-center" dangerouslySetInnerHTML={{__html: currentQuestion.question || currentQuestion.text}}></div>
+                            <div className="prose prose-invert prose-lg font-medium text-white select-text w-full max-w-none leading-relaxed break-words text-center study-prompt-html" dangerouslySetInnerHTML={{__html: normalizeStudyPromptHtml(currentQuestion.question || currentQuestion.text)}}></div>
                         </div>
 
                         <div className="space-y-3 mt-auto">

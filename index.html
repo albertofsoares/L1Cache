@@ -2571,7 +2571,7 @@
                     <div className="glass flex-1 rounded-3xl border border-slate-700 p-6 md:p-10 flex flex-col shadow-2xl bg-slate-900">
 
                         <div className="mb-8 w-full">
-                            <div className="prose prose-invert prose-lg font-medium text-white select-text w-full max-w-none leading-relaxed break-words text-center flex flex-col items-center justify-center" dangerouslySetInnerHTML={{__html: currentQuestion.question || currentQuestion.text}}></div>
+                            <div className="prose prose-invert prose-lg font-medium text-white select-text w-full max-w-none leading-relaxed break-words text-center" dangerouslySetInnerHTML={{__html: normalizeStudyPromptHtml(currentQuestion.question || currentQuestion.text)}}></div>
                         </div>
 
                         <div className="space-y-3 mt-auto">

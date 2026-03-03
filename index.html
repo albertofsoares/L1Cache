@@ -148,7 +148,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc, updateDoc, serverTimestamp, query, onSnapshot, writeBatch, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, ArrowLeftRight, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag, Network, ListChecks, CheckSquare, BrainCircuit, Sliders, Timer, TerminalSquare, ListTodo, CheckCircle, Circle, HelpCircle, Award, Hash, Globe, AppWindow, Image as ImageIcon, Info, Headphones, Mic, StickyNote, Send } from "https://esm.sh/lucide-react@0.344.0?bundle";
+        import { Cpu, Zap, LogOut, Plus, Trash2, Pencil, Check, X, Folder, Lock, Trophy, Bold, Italic, Code, List, ArrowLeft, ArrowLeftRight, Eye, Filter, Save, RotateCcw, Volume2, Keyboard, Activity, Calendar, Settings, PlayCircle, Undo2, Search, ChevronDown, ChevronRight, BookOpen, Layers, Repeat, GraduationCap, AlertCircle, Flame, Target, TrendingUp, Clock, Tag, Network, ListChecks, CheckSquare, BrainCircuit, Sliders, TerminalSquare, ListTodo, CheckCircle, Circle, HelpCircle, Award, Hash, Globe, AppWindow, Image as ImageIcon, Info, Headphones, Mic, StickyNote, Send } from "https://esm.sh/lucide-react@0.344.0?bundle";
 
         const firebaseConfig = {
             apiKey: "AIzaSyClIIJkYOmAvEKPtXvG-SIi9SzxQpaBN9s",
@@ -751,8 +751,6 @@
 
             // Voice-to-Text States
             const [isRecording, setIsRecording] = React.useState(false);
-            const [timeLeft, setTimeLeft] = React.useState(25 * 60);
-            const [isTimerAlert, setIsTimerAlert] = React.useState(false);
             const [feedbackPulse, setFeedbackPulse] = React.useState({ active: false, color: 'transparent' });
             const [emojiBurst, setEmojiBurst] = React.useState([]);
             const [streakMessage, setStreakMessage] = React.useState(null);
@@ -760,7 +758,6 @@
             const recognitionRef = React.useRef(null);
             const emojiBurstTimeoutRef = React.useRef(null);
             const baseTextRef = React.useRef("");
-            const INITIAL_FOCUS_TIME = 25 * 60;
 
             const getStreakMilestone = (streak) => {
                 if (!streak || streak < 5) return null;
@@ -849,31 +846,6 @@
                     }
                 };
             }, []);
-
-            React.useEffect(() => {
-                if (finished) return;
-                const timer = setInterval(() => {
-                    setTimeLeft((prev) => {
-                        if (prev <= 1) {
-                            setIsTimerAlert(true);
-                            return 0;
-                        }
-                        return prev - 1;
-                    });
-                }, 1000);
-                return () => clearInterval(timer);
-            }, [finished]);
-
-            const formatTimer = (seconds) => {
-                const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-                const s = (seconds % 60).toString().padStart(2, '0');
-                return `${m}:${s}`;
-            };
-
-            const resetTimer = () => {
-                setTimeLeft(INITIAL_FOCUS_TIME);
-                setIsTimerAlert(false);
-            };
 
             const handleFlip = () => {
                 AudioEngine.play('flip');
@@ -1074,10 +1046,10 @@
 
             const getStateBadge = () => {
                 const s = String(currentData.state || 'new').toLowerCase().trim();
-                if(s === 'new') return <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-[10px] uppercase font-bold border border-blue-500/30 whitespace-nowrap shrink-0">Novo</span>
-                if(s === 'learning') return <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-[10px] uppercase font-bold border border-orange-500/30 whitespace-nowrap shrink-0">Aprendendo</span>
-                if(s === 'review') return <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-[10px] uppercase font-bold border border-emerald-500/30 whitespace-nowrap shrink-0">Revisão</span>
-                if(s === 'relearning') return <span className="bg-red-500/20 text-red-400 px-2 py-1 rounded text-[10px] uppercase font-bold border border-red-500/30 whitespace-nowrap shrink-0">Reaprender</span>
+                if(s === 'new') return <span className="inline-flex h-8 items-center bg-blue-500/20 text-blue-400 px-2.5 rounded text-[10px] uppercase font-bold border border-blue-500/30 whitespace-nowrap shrink-0">Novo</span>
+                if(s === 'learning') return <span className="inline-flex h-8 items-center bg-orange-500/20 text-orange-400 px-2.5 rounded text-[10px] uppercase font-bold border border-orange-500/30 whitespace-nowrap shrink-0">Aprendendo</span>
+                if(s === 'review') return <span className="inline-flex h-8 items-center bg-emerald-500/20 text-emerald-400 px-2.5 rounded text-[10px] uppercase font-bold border border-emerald-500/30 whitespace-nowrap shrink-0">Revisão</span>
+                if(s === 'relearning') return <span className="inline-flex h-8 items-center bg-red-500/20 text-red-400 px-2.5 rounded text-[10px] uppercase font-bold border border-red-500/30 whitespace-nowrap shrink-0">Reaprender</span>
                 return null;
             }
 
@@ -1129,22 +1101,27 @@
                             </div>
                         </div>
 
-                        {/* Bloco Direito: Timer + Status + Streak + Restantes */}
+                        {/* Bloco Direito: Aula + Tag + Status + Streak + Restantes */}
                         <div className="flex items-center gap-2 shrink-0">
-                            <div onClick={resetTimer} className={`flex items-center gap-1.5 px-2 py-1 rounded border font-mono font-bold cursor-pointer transition-colors whitespace-nowrap shrink-0 ${isTimerAlert ? 'bg-red-500/20 text-red-400 border-red-500/50 animate-pulse' : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white'}`} title="Focus Timer (Clique para resetar)">
-                                <Timer size={14} />
-                                <span>{formatTimer(timeLeft)}</span>
+                            <div className="inline-flex h-8 items-center gap-1.5 px-2.5 rounded border border-slate-700 bg-slate-900 text-slate-300 whitespace-nowrap shrink-0 max-w-[280px]" title={card.lesson || 'Conteúdo Geral'}>
+                                <BookOpen size={14} className="text-slate-500 shrink-0" />
+                                <span className="truncate normal-case">{card.lesson || 'Conteúdo Geral'}</span>
+                            </div>
+
+                            <div className="inline-flex h-8 items-center gap-1 px-2.5 rounded border border-purple-500/30 bg-purple-900/20 text-purple-300 whitespace-nowrap shrink-0 max-w-[220px]" title={card.tags?.length ? card.tags.join(', ') : 'Sem tag'}>
+                                <Tag size={12} className="shrink-0" />
+                                <span className="truncate normal-case">{card.tags?.length ? card.tags.join(' • ') : 'Sem tag'}</span>
                             </div>
 
                             {getStateBadge()}
 
                             {displayedStreak > 0 && (
-                                <div className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] leading-none uppercase font-bold border whitespace-nowrap shrink-0 ${isStreakLocked ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-orange-500 bg-orange-500/10 border-orange-500/20 animate-pulse-slow'}`} title={isStreakLocked ? 'Streak Protegido' : 'Streak Ativo'}>
+                                <div className={`inline-flex h-8 items-center gap-1 px-2.5 rounded text-[11px] uppercase font-bold border whitespace-nowrap shrink-0 ${isStreakLocked ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-orange-500 bg-orange-500/10 border-orange-500/20 animate-pulse-slow'}`} title={isStreakLocked ? 'Streak Protegido' : 'Streak Ativo'}>
                                     <Flame size={13} /> {displayedStreak}
                                 </div>
                             )}
 
-                            <div className="flex items-center gap-1.5 font-mono whitespace-nowrap shrink-0 bg-slate-900 px-2 py-1 rounded border border-slate-800 text-slate-400">
+                            <div className="inline-flex h-8 items-center gap-1.5 font-mono whitespace-nowrap shrink-0 bg-slate-900 px-2.5 rounded border border-slate-800 text-slate-400">
                                 <Layers size={14} className="text-slate-600"/>
                                 <span className="hidden sm:inline">{queue.length - index} restantes</span>
                                 <span className="sm:hidden">{queue.length - index} rest.</span>

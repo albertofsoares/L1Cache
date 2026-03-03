@@ -1696,7 +1696,7 @@
                         }
                         if (tagsChanged) updateData.tags = currentTags;
                         if (Object.keys(updateData).length > 0) {
-                            batch.update(doc(db, "cards", cardId), updateData);
+                            batch.set(doc(db, "cards", cardId), updateData, { merge: true });
                             processedCount++;
                         }
                     });

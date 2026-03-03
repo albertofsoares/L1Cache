@@ -1,0 +1,23 @@
+{
+  "name": "Nosso Site",
+  "short_name": "NossoSite",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "lang": "pt-BR",
+  "description": "Aplicativo de estudo com funcionamento offline.",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/192/4696/4696916.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/4696/4696916.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

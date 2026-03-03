@@ -1103,32 +1103,33 @@
                         )}
                     </div>
 
-                    <div className="mb-4 px-2 text-[10px] sm:text-xs text-slate-500 uppercase tracking-[0.16em]">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="min-w-0 flex flex-col gap-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    <button onClick={handleUndo} disabled={index === 0} title="Desfazer (Ctrl+Z)" className={`flex items-center gap-1 transition-colors shrink-0 ${index === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`}><Undo2 size={16} /> <span className="hidden sm:inline">Desfazer</span></button>
-                                    <span className="bg-slate-900 px-2 py-1 rounded text-blue-400 border border-slate-800 max-w-full break-words">{card.category}</span>
-                                    <span className="text-slate-600 hidden sm:inline">/</span>
-                                    <span className="text-slate-300 normal-case tracking-normal text-[11px] sm:text-xs leading-tight break-words max-w-full">{card.lesson || 'Geral'}</span>
+                    <div className="flex justify-between items-center text-xs text-slate-500 uppercase tracking-widest mb-4 px-2">
+                        <div className="flex items-center gap-4">
+                            <button onClick={handleUndo} disabled={index === 0} title="Desfazer (Ctrl+Z)" className={`flex items-center gap-1 transition-colors ${index === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white'}`}><Undo2 size={16} /> <span className="hidden sm:inline">Desfazer</span></button>
+                            <div className="flex flex-col items-start">
+                                <div className="flex items-center gap-2">
+                                    <span className="bg-slate-900 px-2 py-1 rounded text-blue-400 border border-slate-800">{card.category}</span>
+                                    <span className="text-slate-600">/</span>
+                                    <span className="text-slate-300 truncate max-w-[150px]">{card.lesson || 'Geral'}</span>
                                 </div>
                                 {card.tags && card.tags.length > 0 && (
-                                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                    <div className="flex flex-wrap items-center gap-1 mt-1">
                                         {card.tags.map(t => (
-                                            <span key={t} className="bg-purple-900/30 text-purple-300 px-2 py-0.5 rounded text-[9px] sm:text-[10px] border border-purple-500/30 flex items-center gap-1 normal-case tracking-normal max-w-full break-all"><Tag size={9}/> {t}</span>
+                                            <span key={t} className="bg-purple-900/30 text-purple-400 px-1.5 py-0.5 rounded text-[9px] border border-purple-500/30 flex items-center gap-0.5"><Tag size={8}/> {t}</span>
                                         ))}
                                     </div>
                                 )}
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 sm:justify-end">
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 pl-1">
                             <div onClick={resetTimer} className={`flex items-center gap-1.5 px-2 py-1 rounded border font-mono font-bold cursor-pointer transition-colors whitespace-nowrap ${isTimerAlert ? 'bg-red-500/20 text-red-400 border-red-500/50 animate-pulse' : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white'}`} title="Focus Timer (Clique para resetar)">
                                 <Timer size={14} />
                                 {formatTimer(timeLeft)}
                             </div>
                             {getStateBadge()}
                             {displayedStreak > 0 && (
-                                <div className={`flex items-center gap-1 px-2.5 py-1 rounded text-[10px] sm:text-[11px] leading-none uppercase font-bold border whitespace-nowrap ${isStreakLocked ? 'text-slate-400 bg-slate-800/80 border-slate-600/50' : 'text-orange-400 bg-orange-500/10 border-orange-500/30 animate-pulse-slow'}`}>
-                                    <Flame size={13} className={isStreakLocked ? 'text-slate-500' : 'text-orange-400'} /> Streak: {displayedStreak}
+                                <div className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs sm:text-[11px] leading-none uppercase font-bold border whitespace-nowrap ${isStreakLocked ? 'text-rose-300 bg-rose-500/10 border-rose-400/30' : 'text-orange-500 bg-orange-500/10 border-orange-500/20 animate-pulse-slow'}`}>
+                                    <Flame size={13} /> Streak: {displayedStreak} {isStreakLocked ? '(Travado)' : ''}
                                 </div>
                             )}
                             <div className="flex items-center gap-1.5 font-mono whitespace-nowrap"><Layers size={14} className="text-slate-600"/><span>{queue.length - index} restantes</span></div>

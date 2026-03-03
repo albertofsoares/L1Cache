@@ -16,6 +16,9 @@
     <!-- Babel para JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <!-- Canvas Confetti (Hook Model - Reforço Variável) -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
     <!-- Configuração Tailwind -->
     <script>
         tailwind.config = {
@@ -304,6 +307,16 @@
                     osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
                     gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
                     osc.start(now); osc.stop(now + 0.3);
+                } else if (type === 'level-up') {
+                    // Som de recompensa especial para o Reforço Variável (Jackpot dopaminérgico)
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.setValueAtTime(450, now + 0.1);
+                    osc.frequency.setValueAtTime(600, now + 0.2);
+                    osc.frequency.setValueAtTime(900, now + 0.3);
+                    gainNode.gain.setValueAtTime(0.15, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now); osc.stop(now + 0.5);
                 }
             };
             return { play, toggleBrownNoise };
@@ -846,8 +859,23 @@
             };
 
             const handleRate = async (rating) => {
-                const soundMap = { 1: 'again', 2: 'hard', 3: 'good', 4: 'easy' };
-                AudioEngine.play(soundMap[rating]);
+                let soundType = { 1: 'again', 2: 'hard', 3: 'good', 4: 'easy' }[rating];
+
+                // Hook Model: Reforço Variável (20% chance de "Jackpot" de dopamina em respostas corretas/fáceis)
+                if ((rating === 3 || rating === 4) && Math.random() < 0.20) {
+                    soundType = 'level-up';
+                    if (window.confetti) {
+                        window.confetti({
+                            particleCount: 150,
+                            spread: 80,
+                            origin: { y: 0.6 },
+                            colors: ['#22d3ee', '#a78bfa', '#f472b6', '#34d399'],
+                            disableForReducedMotion: true
+                        });
+                    }
+                }
+
+                AudioEngine.play(soundType);
 
                 let timeSpent = Date.now() - cardStartTime;
                 if (timeSpent > 60000) timeSpent = 60000;
